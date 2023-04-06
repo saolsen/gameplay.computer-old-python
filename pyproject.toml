@@ -1,0 +1,34 @@
+[project]
+name = "gameplay"
+authors = [
+    {name="Steve Olsen", email="steve@steve.computer"},
+]
+description = "play games"
+requires-python = "~=3.11"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+
+dynamic = ["version"]
+
+dependencies = []
+
+[project.optional-dependencies]
+test = ["pytest"]
+lint = ["black", "mypy", "ruff"]
+web = ["fastapi[all]", "databases[asyncpg]", "sqlalchemy"]
+
+#[project.scripts]
+#web = "gameplay.app:DummyClass.get_42"
+
+[build-system]
+requires = ["maturin>=0.14,<0.15"]
+build-backend = "maturin"
+
+[tool.maturin]
+module-name = "gameplay._gameplay"
+features = ["pyo3/extension-module"]
+manifest-path = "crates/gameplay/Cargo.toml"
+python-source = "src"
