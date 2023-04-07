@@ -4,6 +4,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+      - name: check env
+        run: env
       - uses: actions/checkout@v3
       - name: Set up python
         uses: actions/setup-python@v4
