@@ -22,6 +22,6 @@ jobs:
           python -m pip install --upgrade \
             pip maturin tox pytest-github-actions-annotate-failures
       - name: Build package
-        run: maturin build --release
+        run: maturin build
       - name: Test python
         run: tox
