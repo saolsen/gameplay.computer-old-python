@@ -1,9 +1,15 @@
 from typing import Union
 
+from pathlib import Path
+
 import databases
 import sqlalchemy
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
+
 from pydantic import BaseModel
 
 # SQLAlchemy specific code, as with any other app
@@ -38,12 +44,17 @@ class Note(BaseModel):
     completed: bool
 
 
+web_dir = Path(__file__).parent
 app = FastAPI()
+app.mount("/static", StaticFiles(directory=web_dir / "static"), name="static")
+templates = Jinja2Templates(directory=web_dir / "templates")
 
 
-@app.get("/")
-def read_root():
-    return {"Hello": "World"}
+@app.get("/", response_class=HTMLResponse)
+async def read_root(request: Request):
+    return templates.TemplateResponse(
+        "root.html", {"request": request, "hello": "world"}
+    )
 
 
 @app.get("/items/{item_id}")

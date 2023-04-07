@@ -17,11 +17,8 @@ dependencies = []
 
 [project.optional-dependencies]
 test = ["pytest"]
-lint = ["black", "mypy", "ruff"]
+lint = ["black", "mypy", "ruff", "sqlalchemy-stubs"]
 web = ["fastapi[all]", "databases[asyncpg]", "sqlalchemy"]
-
-#[project.scripts]
-#web = "gameplay.app:DummyClass.get_42"
 
 [build-system]
 requires = ["maturin>=0.14,<0.15"]
@@ -32,3 +29,10 @@ module-name = "gameplay._gameplay"
 features = ["pyo3/extension-module"]
 manifest-path = "crates/gameplay/Cargo.toml"
 python-source = "src"
+include = [
+    "src/gameplay/web/static",
+    "src/gameplay/web/templates"
+]
+
+[tool.mypy]
+plugins = "sqlmypy"
