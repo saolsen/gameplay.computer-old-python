@@ -39,6 +39,10 @@ jobs:
             pip maturin tox pytest-github-actions-annotate-failures
       - name: Build package
         run: maturin build
+      - name: Run migrations on test db
+        run: tox -e alembic -- upgrade head
+        env:
+          DATABASE_URL: postgresql://gameplay:gameplay@localhost:5432/gameplay
       - name: Test python
         run: tox
         env:
