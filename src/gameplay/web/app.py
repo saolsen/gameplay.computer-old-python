@@ -1,20 +1,14 @@
 import os
+from pathlib import Path
 from typing import Union
 
-from pathlib import Path
-
-from fastapi import FastAPI, Request, Depends
+import databases
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-import databases
-from pydantic import BaseModel
 
-import sqlalchemy
-
-from . import service, schemas, tables
-
-# from .database import SessionLocal, engine
+from . import schemas, tables
 
 
 def build_app(database: databases.Database) -> FastAPI:

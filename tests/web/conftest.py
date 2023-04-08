@@ -1,7 +1,7 @@
 import os
-import pytest
 
 import databases
+import pytest
 from httpx import AsyncClient
 
 from gameplay.web.app import build_app
