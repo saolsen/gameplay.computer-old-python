@@ -42,4 +42,4 @@ jobs:
       - name: Test python
         run: tox
         env:
-          DATABASE_URL: postgresql://gameplay:gameplay@localhost:5432/gameplay
+          TEST_DATABASE_URL: postgresql://gameplay:gameplay@localhost:5432/gameplay
