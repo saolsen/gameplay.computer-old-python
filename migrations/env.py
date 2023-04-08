@@ -1,3 +1,4 @@
+import os
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config
@@ -13,6 +14,9 @@ config = context.config
 
 
 # TODO: env var
+DATABASE_URL = os.getenv("DATABASE_URL")
+assert DATABASE_URL is not None
+config.set_main_option("sqlalchemy.url", DATABASE_URL)
 # config.set_main_option("sqlalchemy.url", "postgresql://localhost:1234/gameplay")
 # config.set_main_option("sqlalchemy.url", "postgresql://localhost:1234/gameplay_test")
 
