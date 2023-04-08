@@ -19,6 +19,7 @@ dependencies = []
 test = ["pytest"]
 lint = ["black", "mypy", "ruff", "sqlalchemy-stubs"]
 web = ["fastapi[all]", "databases[asyncpg]", "sqlalchemy"]
+migrate = ["alembic", "psycopg2"]
 
 [build-system]
 requires = ["maturin>=0.14,<0.15"]
@@ -36,3 +37,4 @@ include = [
 
 [tool.mypy]
 plugins = "sqlmypy"
+exclude = "migrations"
