@@ -7,6 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+import sentry_sdk
 
 from . import schemas, tables
 
@@ -55,13 +56,29 @@ def build_app(database: databases.Database) -> FastAPI:
         last_record_id = await database.execute(query)
         return {**widget.dict(), "id": last_record_id}
 
+    @app.get("/sentry-debug")
+    async def trigger_error():
+        _division_by_zero = 1 / 0
+
     return app
 
 
 def app() -> FastAPI:
     DATABASE_URL = os.environ.get("DATABASE_URL")
     assert DATABASE_URL is not None
+
     database = databases.Database(DATABASE_URL)
+
+    SENTRY_DSN = os.environ.get("SENTRY_DSN")
+    if SENTRY_DSN is not None:
+        sentry_sdk.init(
+            dsn=SENTRY_DSN,
+            # Set traces_sample_rate to 1.0 to capture 100%
+            # of transactions for performance monitoring.
+            # We recommend adjusting this value in production,
+            traces_sample_rate=1.0,
+        )
+
     _app = build_app(database)
 
     return _app

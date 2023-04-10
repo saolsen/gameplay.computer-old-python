@@ -18,7 +18,7 @@ dependencies = []
 [project.optional-dependencies]
 test = ["pytest"]
 lint = ["black", "mypy", "ruff", "sqlalchemy-stubs"]
-web = ["fastapi[all]", "databases[asyncpg]", "sqlalchemy"]
+web = ["fastapi[all]", "databases[asyncpg]", "sqlalchemy", "sentry-sdk[fastapi]"]
 migrate = ["alembic", "psycopg2"]
 
 [build-system]
