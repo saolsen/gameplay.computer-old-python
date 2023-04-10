@@ -56,10 +56,6 @@ def build_app(database: databases.Database) -> FastAPI:
         last_record_id = await database.execute(query)
         return {**widget.dict(), "id": last_record_id}
 
-    @app.get("/sentry-debug")
-    async def trigger_error():
-        _division_by_zero = 1 / 0
-
     return app
 
 
