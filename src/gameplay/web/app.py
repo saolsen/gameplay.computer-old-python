@@ -70,9 +70,12 @@ def app() -> FastAPI:
     database = databases.Database(DATABASE_URL)
 
     SENTRY_DSN = os.environ.get("SENTRY_DSN")
-    if SENTRY_DSN is not None:
+    SENTRY_ENVIRONMENT = os.environ.get("SENTRY_ENVIRONMENT")
+
+    if SENTRY_DSN is not None and SENTRY_ENVIRONMENT is not None:
         sentry_sdk.init(
             dsn=SENTRY_DSN,
+            environment=SENTRY_ENVIRONMENT,
             # Set traces_sample_rate to 1.0 to capture 100%
             # of transactions for performance monitoring.
             # We recommend adjusting this value in production,
