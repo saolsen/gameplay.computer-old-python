@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel
 
 
@@ -12,3 +14,35 @@ class WidgetCreate(WidgetBase):
 
 class Widget(WidgetBase):
     id: int
+
+
+class TurnBase(BaseModel):
+    player: int
+    column: int
+
+
+class TurnCreate(TurnBase):
+    pass
+
+
+class Turn(TurnBase):
+    id: int
+    number: int
+    match_id: int
+
+
+class MatchBase(BaseModel):
+    game: Literal["connect4"]
+    opponent: Literal["ai"]
+
+
+class MatchCreate(MatchBase):
+    pass
+
+
+class Match(MatchBase):
+    id: int
+    state: str
+    turn: int
+    next_player: int
+    turns: list[Turn]

@@ -1,0 +1,44 @@
+<html>
+
+<head>
+    <title>Connect4 Match</title>
+    <link href="{{ url_for('static', path='/styles.css') }}" rel="stylesheet">
+    <script src="https://unpkg.com/htmx.org@1.8.6"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/sse.js"></script>
+</head>
+
+<body>
+    <h1>Connect4 Match {{match.id}}</h1>
+    <h2>sse test</h2>
+    <div hx-ext="sse" sse-connect="/sse" sse-swap="message">
+        test
+    </div>
+
+
+    <p>game: {{match.game}}</p>
+    <p>opponent: {{match.opponent}}</p>
+    <p>state: {{match.state}}</p>
+    <p>turn: {{match.turn}}</p>
+    <p>next_player: {{match.next_player}}</p>
+
+    <h2>turns</h2>
+    <div id="turns">
+        {% block turns %}
+        <ul>
+            {% for turn in match.turns %}
+            <li>{{turn}}</li>
+            {% endfor %}
+        </ul>
+        {% endblock %}
+    </div>
+
+    <h3>move</h3>
+    <form hx-post="/games/connect4/matches/{{match.id}}/turns" hx-target="#turns">
+        <input type="number" name="move" value="0">
+        <input type="submit" value="Submit">
+    </form>
+
+
+</body>
+
+</html>
