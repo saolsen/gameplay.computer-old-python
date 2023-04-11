@@ -1,23 +1,57 @@
-# from sqlalchemy.orm import Session
-
-# from . import models, schemas
+from .schemas import MatchCreate, Match, TurnCreate, Turn
 
 
-# def get_widget(db: Session, widget_id: int):
-#     return db.query(models.Widgets).filter(models.Widgets.id == widget_id).first()
+# just hack this together to start with
+next_id = 0
+matches: dict[int, Match] = {}
 
 
-# def get_widget_by_name(db: Session, name: str):
-#     return db.query(models.Widgets).filter(models.Widgets.name == name).first()
+async def create_match(new_match: MatchCreate) -> Match:
+    global next_id
+    global matches
+
+    match_id = next_id
+    next_id += 1
+    match = Match(
+        **new_match.dict(),
+        id=match_id,
+        state="playing",
+        turn=1,
+        next_player=1,
+        turns=[],
+    )
+    matches[match_id] = match
+    return match
 
 
-# def get_widgets(db: Session, skip: int = 0, limit: int = 100):
-#     return db.query(models.Widgets).offset(skip).limit(limit).all()
+async def get_match(match_id: int) -> Match:
+    global matches
+
+    match = matches[match_id]
+    return match
 
 
-# def create_widget(db: Session, widget: schemas.WidgetCreate):
-#     db_widget = models.Widgets(**widget.dict())
-#     db.add(db_widget)
-#     db.commit()
-#     db.refresh(db_widget)
-#     return db_widget
+async def follow_match():
+    pass
+
+
+async def stop_following_match():
+    pass
+
+
+async def take_turn(match_id: int, new_turn: TurnCreate) -> Match:
+    global matches
+
+    # todo validate
+    match = matches[match_id]
+    turn = Turn(
+        **new_turn.dict(),
+        id=len(match.turns) + 1,
+        number=len(match.turns) + 1,
+        match_id=match_id,
+    )
+    match.turns.append(turn)
+
+    # todo: notify followers
+
+    return match

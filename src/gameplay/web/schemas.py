@@ -1,6 +1,7 @@
 from typing import Literal
 
 from pydantic import BaseModel
+from fastapi import Form
 
 
 class WidgetBase(BaseModel):
@@ -22,7 +23,9 @@ class TurnBase(BaseModel):
 
 
 class TurnCreate(TurnBase):
-    pass
+    @classmethod
+    def as_form(cls, player: int = Form(...), column: int = Form(...)):
+        return cls(player=player, column=column)
 
 
 class Turn(TurnBase):

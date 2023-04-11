@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}connect4{% endblock %}</title>
+    <link href="https://unpkg.com/@picocss/pico@1.5.9/css/pico.min.css" rel="stylesheet">
+    {% block additional_css %}{% endblock %}
+</head>
+
+<body>
+    <div id="main_content">
+        {% block main_content %}{% endblock %}
+    </div>
+
+    <script src="https://unpkg.com/htmx.org@1.8.6"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/sse.js"></script>
+    {% block additional_js %}{% endblock %}
+
+</body>
+
+</html>
