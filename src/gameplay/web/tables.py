@@ -11,6 +11,7 @@ matches = sqlalchemy.Table(
     sqlalchemy.Column("state", sqlalchemy.JSON),
     sqlalchemy.Column("turn", sqlalchemy.Integer),
     sqlalchemy.Column("next_player", sqlalchemy.Integer),
+    sqlalchemy.Column("winner", sqlalchemy.Integer),
 )
 
 turns = sqlalchemy.Table(

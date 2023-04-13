@@ -43,7 +43,8 @@ class Listener:
             for _, queue in self.queues[notification.payload].items():
                 queue.put_nowait(notification.payload)
         elif isinstance(notification, asyncpg_listen.Timeout):
-            print(f"got timeout: {notification.channel}")
+            pass
+            # print(f"got timeout: {notification.channel}")
 
     def listen(self, match_id: int):
         self._start()

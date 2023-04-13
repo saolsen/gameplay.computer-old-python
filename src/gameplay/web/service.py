@@ -5,6 +5,66 @@ from databases import Database
 import asyncio
 
 
+def check(match: Match):
+    """
+    See if anybody won yet.
+    Just check in a dumb way for now, each possibility
+    """
+    # Check rows
+    for row in range(0, 6):
+        for col in range(0, 4):
+            if (
+                match.state[col][row] != 0
+                and match.state[col][row]
+                == match.state[col + 1][row]
+                == match.state[col + 2][row]
+                == match.state[col + 3][row]
+            ):
+                return ("WIN", match.state[col][row])
+    # Check cols
+    for col in range(0, 7):
+        for row in range(0, 3):
+            if (
+                match.state[col][row] != 0
+                and match.state[col][row]
+                == match.state[col][row + 1]
+                == match.state[col][row + 2]
+                == match.state[col][row + 3]
+            ):
+                return ("WIN", match.state[col][row])
+    # Check diag up
+    for col in range(0, 4):
+        for row in range(0, 3):
+            if (
+                match.state[col][row] != 0
+                and match.state[col][row]
+                == match.state[col + 1][row + 1]
+                == match.state[col + 2][row + 2]
+                == match.state[col + 3][row + 3]
+            ):
+                return ("WIN", match.state[col][row])
+
+    # Check diag down
+    for col in range(0, 4):
+        for row in range(3, 6):
+            if (
+                match.state[col][row] != 0
+                and match.state[col][row]
+                == match.state[col + 1][row - 1]
+                == match.state[col + 2][row - 2]
+                == match.state[col + 3][row - 3]
+            ):
+                return ("WIN", match.state[col][row])
+
+    # Check draw
+    for col in range(0, 7):
+        if match.state[col][5] == 0:
+            # There are still moves left
+            return None
+
+    return ("DRAW", None)
+
+
 async def create_match(database: Database, new_match: MatchCreate) -> Match:
     insert_query = matches.insert().values(
         game=new_match.game,
@@ -48,12 +108,14 @@ async def stop_following_match():
 
 
 async def take_ai_turn(database: Database, match_id: int):
-    # pretend this takes a while
-    await asyncio.sleep(1)
     async with database.transaction():
-        await take_turn(
-            database, match_id, TurnCreate(column=random.randint(0, 6), player=2)
-        )
+        match = await get_match(database, match_id)
+        if match.winner is not None:
+            return
+        columns = [i for i in range(7) if match.state[i][5] == 0]
+
+        column = random.choice(columns)
+        await take_turn(database, match_id, TurnCreate(column=column, player=2))
         await database.execute(
             query="select pg_notify('test', :match_id)",
             values={"match_id": str(match_id)},
@@ -75,6 +137,16 @@ async def take_turn(database: Database, match_id: int, new_turn: TurnCreate) -> 
         match.next_player = 1 if match.next_player == 2 else 2
         match.turn += 1
 
+        # check for win
+        result = check(match)
+        print(result)
+        if result is not None:
+            kind, winner = result
+            if kind == "WIN":
+                match.winner = winner
+            elif kind == "DRAW":
+                match.winner = 0
+
         insert_turn = turns.insert().values(
             number=match.turn,
             match_id=match_id,
@@ -88,6 +160,7 @@ async def take_turn(database: Database, match_id: int, new_turn: TurnCreate) -> 
                 state=match.state,
                 turn=match.turn,
                 next_player=match.next_player,
+                winner=match.winner,
             )
         )
         await database.execute(query=insert_turn)

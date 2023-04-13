@@ -57,3 +57,4 @@ class Match(MatchBase):
     turn: int
     next_player: int
     turns: list[Turn]
+    winner: int | None
