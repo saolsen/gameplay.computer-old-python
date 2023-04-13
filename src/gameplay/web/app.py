@@ -1,11 +1,12 @@
 import asyncio
+from asyncio import Queue
 import os
 from pathlib import Path
 from collections import defaultdict
 
 import databases
 import sentry_sdk
-from fastapi import FastAPI, Request, Response, Depends
+from fastapi import FastAPI, Request, Response, Depends, BackgroundTasks
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2_fragments.fastapi import Jinja2Blocks  # type: ignore
@@ -46,7 +47,7 @@ class Listener:
 
     def listen(self, match_id: int):
         self._start()
-        queue = asyncio.Queue()
+        queue = Queue()
         self.queues[str(match_id)][id(queue)] = queue
 
         async def listener():
@@ -55,7 +56,8 @@ class Listener:
                     item = await queue.get()
                     yield item
             except asyncio.CancelledError as e:
-                del self.queues[match_id][id(queue)]
+                if id(queue) in self.queues[match_id]:
+                    del self.queues[match_id][id(queue)]
                 raise e
 
         return listener
@@ -67,9 +69,6 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
     @app.on_event("startup")
     async def startup():
         await database.connect()
-
-        # set up the notify listener.
-        # @Q: where does this go really?
 
     @app.on_event("shutdown")
     async def shutdown():
@@ -90,7 +89,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
         hx_request = request.headers.get("hx-request") == "true"
 
         new_match = schemas.MatchCreate(game="connect4", opponent="ai")
-        match = await service.create_match(new_match)
+        match = await service.create_match(database, new_match)
 
         block_name = None
         if hx_request:
@@ -108,7 +107,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
     async def get_match(request: Request, response: Response, match_id: int):
         hx_request = request.headers.get("hx-request") == "true"
 
-        match = await service.get_match(match_id)
+        match = await service.get_match(database, match_id)
 
         block_name = None
         if hx_request:
@@ -126,12 +125,15 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
     async def create_turn(
         request: Request,
         response: Response,
+        background_tasks: BackgroundTasks,
         match_id: int,
         turn: schemas.TurnCreate = Depends(schemas.TurnCreate.as_form),
     ):
         hx_request = request.headers.get("hx-request") == "true"
 
-        match = await service.take_turn(match_id, turn)
+        match = await service.take_turn(database, match_id, turn)
+        if match.next_player == 2:
+            background_tasks.add_task(service.take_ai_turn, database, match_id)
 
         block_name = None
         if hx_request:

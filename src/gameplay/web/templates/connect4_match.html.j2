@@ -9,8 +9,11 @@
     <div class="grid" id="match_state" hx-get="/matches/{{match.id}}/" hx-trigger="sse:message">
         {% block match_state %}
         <div>
-            <p>turn: {{match.turn}}</p>
-            <p>state: {{match.state}}</p>
+            {% if match.next_player == 1%}
+            <h2>Your turn</h2>
+            {% else %}
+            <h2>Waiting for opponent's turn</h2>
+            {% endif %}
 
             {# Build the board with svg. code based on https://codepen.io/rossta/pen/eyrgJe #}
             <svg width="350px" viewBox="0 0 700 700" xmlns="http://www.w3.org/2000/svg">
