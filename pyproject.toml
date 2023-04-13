@@ -22,6 +22,7 @@ web = [
     "fastapi[all]",
     "sse-starlette",
     "databases[asyncpg]",
+    "asyncpg_listen",
     "sqlalchemy",
     "sentry-sdk[fastapi]",
     "jinja2",

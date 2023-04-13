@@ -1,6 +1,7 @@
 import asyncio
 import os
 from pathlib import Path
+from collections import defaultdict
 
 import databases
 import sentry_sdk
@@ -9,16 +10,66 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2_fragments.fastapi import Jinja2Blocks  # type: ignore
 from sse_starlette.sse import EventSourceResponse
+import asyncpg_listen
 
 from . import schemas, service
 
 
-def build_app(database: databases.Database) -> FastAPI:
+class Listener:
+    def __init__(self, database_url):
+        self.database_url = database_url
+        self.queues = defaultdict(dict)
+        self.running = False
+
+    def _start(self):
+        if not self.running:
+            # @note: listener makes its own connections to the database
+            # and doesn't use the pool that route handlers use.
+            self.listener = asyncpg_listen.NotificationListener(
+                asyncpg_listen.connect_func(self.database_url)
+            )
+            self.listener_task = asyncio.create_task(
+                self.listener.run(
+                    {"test": self.handle_test},
+                    policy=asyncpg_listen.ListenPolicy.ALL,
+                )
+            )
+            self.running = True
+
+    async def handle_test(self, notification: asyncpg_listen.NotificationOrTimeout):
+        if isinstance(notification, asyncpg_listen.Notification):
+            print(f"got notification: {notification.channel} {notification.payload}")
+            for _, queue in self.queues[notification.payload].items():
+                queue.put_nowait(notification.payload)
+        elif isinstance(notification, asyncpg_listen.Timeout):
+            print(f"got timeout: {notification.channel}")
+
+    def listen(self, match_id: int):
+        self._start()
+        queue = asyncio.Queue()
+        self.queues[str(match_id)][id(queue)] = queue
+
+        async def listener():
+            try:
+                while True:
+                    item = await queue.get()
+                    yield item
+            except asyncio.CancelledError as e:
+                del self.queues[match_id][id(queue)]
+                raise e
+
+        return listener
+
+
+def build_app(database: databases.Database, listener: Listener) -> FastAPI:
     app = FastAPI()
 
     @app.on_event("startup")
     async def startup():
         await database.connect()
+
+        # set up the notify listener.
+        # @Q: where does this go really?
 
     @app.on_event("shutdown")
     async def shutdown():
@@ -53,7 +104,7 @@ def build_app(database: databases.Database) -> FastAPI:
         )
 
     # returns the match
-    @app.get("/matches/{match_id}", response_class=HTMLResponse)
+    @app.get("/matches/{match_id}/", response_class=HTMLResponse)
     async def get_match(request: Request, response: Response, match_id: int):
         hx_request = request.headers.get("hx-request") == "true"
 
@@ -61,7 +112,7 @@ def build_app(database: databases.Database) -> FastAPI:
 
         block_name = None
         if hx_request:
-            block_name = "main_content"
+            block_name = "match_state"  # todo: dynamic
             response.headers["HX-PUSH-URL"] = f"/matches/{match.id}/"
 
         return templates.TemplateResponse(
@@ -84,7 +135,8 @@ def build_app(database: databases.Database) -> FastAPI:
 
         block_name = None
         if hx_request:
-            block_name = "main_content"
+            block_name = "match_state"  # todo: dynamic
+            # block_name = "main_content"
             response.headers["HX-PUSH-URL"] = f"/matches/{match.id}/"
 
         return templates.TemplateResponse(
@@ -93,9 +145,10 @@ def build_app(database: databases.Database) -> FastAPI:
             block_name=block_name,
         )
 
-    @app.get("/matches/{match_id}/changes", response_class=EventSourceResponse)
-    async def watch_match_changes(request: Request):
-        pass
+    @app.get("/matches/{match_id}/changes/", response_class=EventSourceResponse)
+    async def watch_match_changes(request: Request, match_id: int):
+        fn = listener.listen(match_id)
+        return EventSourceResponse(fn())
 
     @app.get("/sse", response_class=EventSourceResponse)
     async def sse(request: Request):
@@ -137,6 +190,8 @@ def app() -> FastAPI:
             traces_sample_rate=1.0,
         )
 
-    _app = build_app(database)
+    listener = Listener(DATABASE_URL)
+
+    _app = build_app(database, listener)
 
     return _app
