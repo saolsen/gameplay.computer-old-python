@@ -1,4 +1,5 @@
 from .schemas import MatchCreate, Match, TurnCreate, Turn
+import random
 
 
 # just hack this together to start with
@@ -15,8 +16,16 @@ async def create_match(new_match: MatchCreate) -> Match:
     match = Match(
         **new_match.dict(),
         id=match_id,
-        state="playing",
-        turn=1,
+        state=(
+            [0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0],
+        ),
+        turn=0,
         next_player=1,
         turns=[],
     )
@@ -51,6 +60,21 @@ async def take_turn(match_id: int, new_turn: TurnCreate) -> Match:
         match_id=match_id,
     )
     match.turns.append(turn)
+    match.turn += 1
+
+    for i in range(6):
+        if match.state[new_turn.column][i] == 0:
+            match.state[new_turn.column][i] = new_turn.player
+            break
+
+    # @hack: do a random inline turn for the other team.
+    other = random.randint(0, 6)
+    for i in range(6):
+        if match.state[other][i] == 0:
+            match.state[other][i] = 2
+            break
+
+    # todo: update next player
 
     # todo: notify followers
 

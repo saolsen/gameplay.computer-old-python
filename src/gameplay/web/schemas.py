@@ -45,7 +45,15 @@ class MatchCreate(MatchBase):
 
 class Match(MatchBase):
     id: int
-    state: str
+    state: tuple[
+        list[int],
+        list[int],
+        list[int],
+        list[int],
+        list[int],
+        list[int],
+        list[int],
+    ]
     turn: int
     next_player: int
     turns: list[Turn]

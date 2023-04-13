@@ -3,12 +3,12 @@
 {% block main_content %}
 
 <h1>Connect4</h1>
-
+<p>Play connect4 against an AI.</p>
 <button hx-post="/matches/" hx-target="#main_content">Play</button>
 
-<h2>sse test</h2>
+{# <h2>sse test</h2>
 <div hx-ext="sse" sse-connect="/sse" sse-swap="message">
     test
-</div>
+</div> #}
 
 {% endblock %}
