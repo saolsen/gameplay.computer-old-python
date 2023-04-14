@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, Self
 
 from fastapi import Form
 from pydantic import BaseModel
@@ -24,7 +24,7 @@ class TurnBase(BaseModel):
 
 class TurnCreate(TurnBase):
     @classmethod
-    def as_form(cls, player: int = Form(...), column: int = Form(...)):
+    def as_form(cls, player: int = Form(...), column: int = Form(...)) -> Self:
         return cls(player=player, column=column)
 
 

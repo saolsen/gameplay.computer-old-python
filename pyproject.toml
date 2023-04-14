@@ -47,3 +47,4 @@ include = [
 [tool.mypy]
 plugins = "sqlmypy"
 exclude = "migrations"
+strict = true

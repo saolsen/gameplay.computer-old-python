@@ -3,6 +3,7 @@ import os
 from asyncio import Queue
 from collections import defaultdict
 from pathlib import Path
+from typing import Any, AsyncIterator, Callable
 
 import asyncpg_listen
 import databases
@@ -17,12 +18,12 @@ from . import schemas, service
 
 
 class Listener:
-    def __init__(self, database_url):
+    def __init__(self, database_url: str):
         self.database_url = database_url
-        self.queues = defaultdict(dict)
+        self.queues: dict[int, dict[int, Queue[str]]] = defaultdict(dict)
         self.running = False
 
-    def _start(self):
+    def _start(self) -> None:
         if not self.running:
             # @note: listener makes its own connections to the database
             # and doesn't use the pool that route handlers use.
@@ -37,21 +38,25 @@ class Listener:
             )
             self.running = True
 
-    async def handle_test(self, notification: asyncpg_listen.NotificationOrTimeout):
+    async def handle_test(
+        self, notification: asyncpg_listen.NotificationOrTimeout
+    ) -> None:
         if isinstance(notification, asyncpg_listen.Notification):
             print(f"got notification: {notification.channel} {notification.payload}")
-            for _, queue in self.queues[notification.payload].items():
-                queue.put_nowait(notification.payload)
+            if notification.payload is not None:
+                match_id = int(notification.payload)
+                for _, queue in self.queues[match_id].items():
+                    queue.put_nowait(notification.payload)
         elif isinstance(notification, asyncpg_listen.Timeout):
             pass
             # print(f"got timeout: {notification.channel}")
 
-    def listen(self, match_id: int):
+    def listen(self, match_id: int) -> Callable[[], AsyncIterator[str]]:
         self._start()
-        queue: Queue = Queue()
-        self.queues[str(match_id)][id(queue)] = queue
+        queue: Queue[str] = Queue()
+        self.queues[match_id][id(queue)] = queue
 
-        async def listener():
+        async def listener() -> AsyncIterator[str]:
             try:
                 while True:
                     item = await queue.get()
@@ -68,11 +73,11 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
     app = FastAPI()
 
     @app.on_event("startup")
-    async def startup():
+    async def startup() -> None:
         await database.connect()
 
     @app.on_event("shutdown")
-    async def shutdown():
+    async def shutdown() -> None:
         await database.disconnect()
 
     web_dir = Path(__file__).parent
@@ -81,12 +86,12 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
     templates = Jinja2Blocks(directory=web_dir / "templates")
 
     @app.get("/", response_class=HTMLResponse)
-    async def get_root(request: Request):
+    async def get_root(request: Request) -> Any:
         return templates.TemplateResponse("root.html.j2", {"request": request})
 
     # returns the match
     @app.post("/matches/", response_class=HTMLResponse)
-    async def create_match(request: Request, response: Response):
+    async def create_match(request: Request, response: Response) -> Any:
         hx_request = request.headers.get("hx-request") == "true"
 
         new_match = schemas.MatchCreate(game="connect4", opponent="ai")
@@ -105,7 +110,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
 
     # returns the match
     @app.get("/matches/{match_id}/", response_class=HTMLResponse)
-    async def get_match(request: Request, response: Response, match_id: int):
+    async def get_match(request: Request, response: Response, match_id: int) -> Any:
         hx_request = request.headers.get("hx-request") == "true"
 
         match = await service.get_match(database, match_id)
@@ -129,7 +134,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
         background_tasks: BackgroundTasks,
         match_id: int,
         turn: schemas.TurnCreate = Depends(schemas.TurnCreate.as_form),
-    ):
+    ) -> Any:
         hx_request = request.headers.get("hx-request") == "true"
 
         match = await service.take_turn(database, match_id, turn)
@@ -149,7 +154,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
         )
 
     @app.get("/matches/{match_id}/changes/", response_class=EventSourceResponse)
-    async def watch_match_changes(request: Request, match_id: int):
+    async def watch_match_changes(request: Request, match_id: int) -> Any:
         fn = listener.listen(match_id)
         return EventSourceResponse(fn())
 

@@ -6,7 +6,7 @@ from .schemas import Match, MatchCreate, Turn, TurnCreate
 from .tables import matches, turns
 
 
-def check(match: Match):
+def check(match: Match) -> tuple[str, int | None] | None:
     """
     See if anybody won yet.
     Just check in a dumb way for now, each possibility
@@ -100,7 +100,7 @@ async def get_match(database: Database, match_id: int) -> Match:
     return Match(**dict(match), turns=[Turn(**dict(t)) for t in match_turns])
 
 
-async def take_ai_turn(database: Database, match_id: int):
+async def take_ai_turn(database: Database, match_id: int) -> None:
     async with database.transaction():
         match = await get_match(database, match_id)
         if match.winner is not None:
