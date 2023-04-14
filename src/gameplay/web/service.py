@@ -1,7 +1,9 @@
-from .schemas import MatchCreate, Match, TurnCreate, Turn
-from .tables import matches, turns
 import random
+
 from databases import Database
+
+from .schemas import Match, MatchCreate, Turn, TurnCreate
+from .tables import matches, turns
 
 
 def check(match: Match):
@@ -98,14 +100,6 @@ async def get_match(database: Database, match_id: int) -> Match:
     return Match(**dict(match), turns=[Turn(**dict(t)) for t in match_turns])
 
 
-async def follow_match():
-    pass
-
-
-async def stop_following_match():
-    pass
-
-
 async def take_ai_turn(database: Database, match_id: int):
     async with database.transaction():
         match = await get_match(database, match_id)
@@ -138,7 +132,6 @@ async def take_turn(database: Database, match_id: int, new_turn: TurnCreate) -> 
 
         # check for win
         result = check(match)
-        print(result)
         if result is not None:
             kind, winner = result
             if kind == "WIN":

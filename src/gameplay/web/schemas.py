@@ -1,7 +1,7 @@
 from typing import Literal
 
-from pydantic import BaseModel
 from fastapi import Form
+from pydantic import BaseModel
 
 
 class WidgetBase(BaseModel):

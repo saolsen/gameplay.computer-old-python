@@ -1,17 +1,17 @@
 import asyncio
-from asyncio import Queue
 import os
-from pathlib import Path
+from asyncio import Queue
 from collections import defaultdict
+from pathlib import Path
 
+import asyncpg_listen
 import databases
 import sentry_sdk
-from fastapi import FastAPI, Request, Response, Depends, BackgroundTasks
+from fastapi import BackgroundTasks, Depends, FastAPI, Request, Response
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2_fragments.fastapi import Jinja2Blocks  # type: ignore
 from sse_starlette.sse import EventSourceResponse
-import asyncpg_listen
 
 from . import schemas, service
 
@@ -152,24 +152,6 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
     async def watch_match_changes(request: Request, match_id: int):
         fn = listener.listen(match_id)
         return EventSourceResponse(fn())
-
-    @app.get("/sse", response_class=EventSourceResponse)
-    async def sse(request: Request):
-        async def event_publisher():
-            i = 0
-            try:
-                while True:
-                    i += 1
-                    yield dict(data=i)
-                    await asyncio.sleep(0.2)
-            except asyncio.CancelledError as e:
-                print(f"Disconnected from client (via refresh/close) {request.client}")
-                # Do any other cleanup, if any
-                # todo: I dunno that I really need to raise again...
-                # we're just done, client is gone.
-                raise e
-
-        return EventSourceResponse(event_publisher())
 
     return app
 
