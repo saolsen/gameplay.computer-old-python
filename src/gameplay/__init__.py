@@ -1,3 +1,3 @@
-from ._gameplay import sum_as_string  # type: ignore
+from . import _gameplay as native
 
-__all__ = ["sum_as_string"]
+__all__ = ["native"]

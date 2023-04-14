@@ -1,3 +1,4 @@
-from ._gameplay import sum_as_string  # type: ignore
+# how to get the crate of native code.
+from .. import native
 
-__all__ = ["sum_as_string"]
+y: str = native.sum_as_string(1, 2)
