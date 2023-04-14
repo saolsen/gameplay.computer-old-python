@@ -48,7 +48,7 @@ class Listener:
 
     def listen(self, match_id: int):
         self._start()
-        queue = Queue()
+        queue: Queue = Queue()
         self.queues[str(match_id)][id(queue)] = queue
 
         async def listener():
@@ -113,7 +113,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
         block_name = None
         if hx_request:
             block_name = "match_state"  # todo: dynamic
-            response.headers["HX-PUSH-URL"] = f"/matches/{match.id}/"
+            # response.headers["HX-PUSH-URL"] = f"/matches/{match.id}/"
 
         return templates.TemplateResponse(
             "connect4_match.html.j2",
@@ -140,7 +140,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
         if hx_request:
             block_name = "match_state"  # todo: dynamic
             # block_name = "main_content"
-            response.headers["HX-PUSH-URL"] = f"/matches/{match.id}/"
+            # response.headers["HX-PUSH-URL"] = f"/matches/{match.id}/"
 
         return templates.TemplateResponse(
             "connect4_match.html.j2",

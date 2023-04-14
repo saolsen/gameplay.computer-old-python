@@ -2,7 +2,6 @@ from .schemas import MatchCreate, Match, TurnCreate, Turn
 from .tables import matches, turns
 import random
 from databases import Database
-import asyncio
 
 
 def check(match: Match):
