@@ -5,6 +5,8 @@ from databases import Database
 from .schemas import Match, MatchCreate, Turn, TurnCreate
 from .tables import matches, turns
 
+from .. import connect4
+
 
 def check(match: Match) -> tuple[str, int | None] | None:
     """
@@ -119,28 +121,24 @@ async def take_turn(database: Database, match_id: int, new_turn: TurnCreate) -> 
     async with database.transaction():
         match = await get_match(database, match_id)
         assert match is not None
-        assert match.next_player == new_turn.player
-        assert match.state[new_turn.column][5] == 0
 
-        for i in range(6):
-            if match.state[new_turn.column][i] == 0:
-                match.state[new_turn.column][i] = new_turn.player
-                break
+        state = connect4.State(
+            board=match.state, next_player=connect4.Player(match.next_player)
+        )
+        assert new_turn.column in state.actions()
 
-        match.next_player = 1 if match.next_player == 2 else 2
-        match.turn += 1
-
-        # check for win
-        result = check(match)
-        if result is not None:
-            kind, winner = result
-            if kind == "WIN":
-                match.winner = winner
-            elif kind == "DRAW":
-                match.winner = 0
+        result = state.turn(connect4.Player(new_turn.player), new_turn.column)
+        winner: int | None
+        match result:
+            case connect4.Player():
+                winner = result.value
+            case "draw":
+                winner = 0
+            case None:
+                winner = None
 
         insert_turn = turns.insert().values(
-            number=match.turn,
+            number=match.turn + 1,
             match_id=match_id,
             player=new_turn.player,
             column=new_turn.column,
@@ -149,10 +147,10 @@ async def take_turn(database: Database, match_id: int, new_turn: TurnCreate) -> 
             matches.update()
             .where(matches.c.id == match_id)
             .values(
-                state=match.state,
-                turn=match.turn,
-                next_player=match.next_player,
-                winner=match.winner,
+                state=state.board,
+                turn=match.turn + 1,
+                next_player=state.next_player.value,
+                winner=winner,
             )
         )
         await database.execute(query=insert_turn)
