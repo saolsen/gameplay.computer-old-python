@@ -1,44 +1,29 @@
-import random
-
-from databases import Database
-
-from .schemas import Match, MatchCreate, Turn, TurnCreate
-from .tables import matches, turns
-
-from .. import connect4
+from ..domain import model
+from ..domain.model import Game, Player
+from .session import Session
 
 
-async def create_match(database: Database, new_match: MatchCreate) -> Match:
-    insert_query = matches.insert().values(
-        game=new_match.game,
-        opponent=new_match.opponent,
-        state=(
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0],
-        ),
-        turn=0,
-        next_player=1,
-    )
-    async with database.transaction():
-        match_id = await database.execute(query=insert_query)
-        match = await get_match(database, match_id)
-        return match
+async def create_match(session: Session) -> int:
+    async with session.transaction():
+        game = Game()
+        match_id = await session.games.create(game)
+        
+        session.event(MatchCreated(match_id=match_id)))
+
+    return match_id
 
 
-async def get_match(database: Database, match_id: int) -> Match:
-    match = await database.fetch_one(
-        query=matches.select().where(matches.c.id == match_id)
-    )
-    match_turns = await database.fetch_all(
-        query=turns.select().where(turns.c.match_id == match_id)
-    )
+async def get_match(match_id: int, session: Session) -> Match:
+    game = await session.games.get(match_id)
+        # should basically do this in the repo
+        """ match = await database.fetch_one(
+            query=matches.select().where(matches.c.id == match_id)
+        )
+        match_turns = await database.fetch_all(
+            query=turns.select().where(turns.c.match_id == match_id)
+        ) """
 
-    assert match is not None
+    assert game is not None
     return Match(**dict(match), turns=[Turn(**dict(t)) for t in match_turns])
 
 
