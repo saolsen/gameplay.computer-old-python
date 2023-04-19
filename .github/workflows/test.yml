@@ -46,4 +46,6 @@ jobs:
       - name: Test python
         run: tox
         env:
+          CLERK_PUBLISHABLE_KEY: xxxxx
+          CLERK_JWT_PUBLIC_KEY: xxxxx
           TEST_DATABASE_URL: postgresql://gameplay:gameplay@localhost:5432/gameplay

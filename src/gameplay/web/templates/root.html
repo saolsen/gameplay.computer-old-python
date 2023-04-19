@@ -1,9 +1,12 @@
 {% extends "_layout.html" %}
-{% block title %}Connect4{% endblock %}
-{% block main_content %}
+{% block title %}root{% endblock %}
+{% block main %}
 
-<h1>Connect4</h1>
-<p>Play connect4 against an AI.</p>
+<h1>Sup</h1>
+<p>Play connect4 against an AI ok</p>
+<a href="/test">test</a>
 <button hx-post="/matches/" hx-target="#main_content">Play</button>
+
+<span>hello {{user_id}} </span>
 
 {% endblock %}

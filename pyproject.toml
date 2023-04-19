@@ -26,7 +26,8 @@ web = [
     "sqlalchemy",
     "sentry-sdk[fastapi]",
     "jinja2",
-    "jinja2-fragments"
+    "jinja2-fragments",
+    "jwcrypto",
 ]
 migrate = ["alembic", "psycopg2"]
 

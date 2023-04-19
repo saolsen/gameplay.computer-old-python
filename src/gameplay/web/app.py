@@ -1,5 +1,6 @@
 import asyncio
 import os
+import json
 from asyncio import Queue
 from collections import defaultdict
 from pathlib import Path
@@ -13,6 +14,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2_fragments.fastapi import Jinja2Blocks  # type: ignore
 from sse_starlette.sse import EventSourceResponse
+from jwcrypto import jwt, jwk
 
 from . import schemas, service
 
@@ -70,6 +72,30 @@ class Listener:
 
 
 def build_app(database: databases.Database, listener: Listener) -> FastAPI:
+    clerk_publishable_key = os.environ.get("CLERK_PUBLISHABLE_KEY")
+    assert clerk_publishable_key is not None
+
+    clerk_jwt_public_key = os.environ.get("CLERK_JWT_PUBLIC_KEY")
+    assert clerk_jwt_public_key is not None
+    pem = bytes(clerk_jwt_public_key, "utf-8")
+    key = jwk.JWK.from_pem(data=pem)
+
+    def get_user(request: Request) -> str | None:
+        session = request.cookies.get("__session")
+        user_id = None
+        if session:
+            token = jwt.JWT(key=key, jwt=session, expected_type="JWS")
+            token.validate(key=key)
+            claims = json.loads(token.claims)
+            user_id = claims["sub"]
+            print(user_id)
+        return user_id
+        """ token = req.headers["Authorization"]
+        # Here your code for verifying the token or whatever you use
+        if token is not valid:
+            raise HTTPException(status_code=401, detail="Unauthorized")
+        return True """
+
     app = FastAPI()
 
     @app.on_event("startup")
@@ -86,8 +112,36 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
     templates = Jinja2Blocks(directory=web_dir / "templates")
 
     @app.get("/", response_class=HTMLResponse)
-    async def get_root(request: Request) -> Any:
-        return templates.TemplateResponse("root.html", {"request": request})
+    async def get_root(
+        request: Request, user_id: str | None = Depends(get_user)
+    ) -> Any:
+        # print(request.cookies)
+        # session = request.cookies.get("__session")
+        # user_id = None
+        # if session:
+        #     token = jwt.JWT(key=key, jwt=session, expected_type="JWS")
+        #     token.validate(key=key)
+        #     claims = json.loads(token.claims)
+        #     user_id = claims["sub"]
+        #     print(user_id)
+
+        return templates.TemplateResponse(
+            "root.html",
+            {
+                "request": request,
+                "clerk_publishable_key": clerk_publishable_key,
+                "user_id": user_id,
+            },
+        )
+
+    @app.get("/test", response_class=HTMLResponse)
+    async def get_test(request: Request) -> Any:
+        print(request.cookies)
+
+        return templates.TemplateResponse(
+            "test.html",
+            {"request": request, "clerk_publishable_key": clerk_publishable_key},
+        )
 
     # returns the match
     @app.post("/matches/", response_class=HTMLResponse)
