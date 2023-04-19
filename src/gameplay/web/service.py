@@ -4,7 +4,6 @@ from databases import Database
 
 from .schemas import Match, MatchCreate, Turn, TurnCreate
 from .tables import matches, turns
-
 from .. import connect4
 
 
@@ -23,7 +22,7 @@ def check(match: Match) -> tuple[str, int | None] | None:
                 == match.state[col + 2][row]
                 == match.state[col + 3][row]
             ):
-                return ("WIN", match.state[col][row])
+                return "WIN", match.state[col][row]
     # Check cols
     for col in range(0, 7):
         for row in range(0, 3):
@@ -34,7 +33,7 @@ def check(match: Match) -> tuple[str, int | None] | None:
                 == match.state[col][row + 2]
                 == match.state[col][row + 3]
             ):
-                return ("WIN", match.state[col][row])
+                return "WIN", match.state[col][row]
     # Check diag up
     for col in range(0, 4):
         for row in range(0, 3):
@@ -57,7 +56,7 @@ def check(match: Match) -> tuple[str, int | None] | None:
                 == match.state[col + 2][row - 2]
                 == match.state[col + 3][row - 3]
             ):
-                return ("WIN", match.state[col][row])
+                return "WIN", match.state[col][row]
 
     # Check draw
     for col in range(0, 7):
@@ -65,7 +64,7 @@ def check(match: Match) -> tuple[str, int | None] | None:
             # There are still moves left
             return None
 
-    return ("DRAW", None)
+    return "DRAW", None
 
 
 async def create_match(database: Database, new_match: MatchCreate) -> Match:

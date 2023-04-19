@@ -9,5 +9,5 @@ async def test_database(anyio_backend: str, database: databases.Database) -> Non
 
 async def test_api(anyio_backend: str, api: AsyncClient) -> None:
     response = await api.get("/")
-    assert response.status_code == 200
+    assert 200 == response.status_code
     assert response.headers["content-type"] == "text/html; charset=utf-8"

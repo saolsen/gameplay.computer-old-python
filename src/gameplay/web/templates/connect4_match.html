@@ -1,4 +1,4 @@
-{% extends "_layout.html.j2" %}
+{% extends "_layout.html" %}
 {% block title %}Connect4{% endblock %}
 {% block main_content %}
 
@@ -38,7 +38,7 @@
                 <svg x="0" y="0">
                     {% for i in range(0, 8): %}
                     <g>
-                        <circle class="turn-marker" cx="{{i*100+50}}" cy="50" r="45"
+                        <circle class="turn-marker" cx="{{ i*100 + 50 }}" cy="50" r="45"
                             hx-post="/matches/{{match.id}}/turns/" hx-target="#match_state"
                             hx-vals='{"player": 1, "column": {{i}}}'>
                         </circle>
@@ -47,10 +47,10 @@
                 </svg>
                 {% endif %}
                 {% for col in range(0,7) %}
-                <svg x="{{100*col}}" y="100">
+                <svg x="{{100 * col}}" y="100">
                     {% for row in range(0,6) %}
                     {% if match.state[col][row] == 1 %}
-                    <circle cx="50" cy="{{550-row*100}}" r="45" fill="#254689"></circle>
+                    <circle cx="50" cy="{{ 550 - row * 100 }}" r="45" fill="#254689"></circle>
                     {% elif match.state[col][row] == 2 %}
                     <circle cx="50" cy="{{550-row*100}}" r="45" fill="#FC7E69"></circle>
                     {% endif %}

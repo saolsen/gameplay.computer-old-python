@@ -87,7 +87,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
 
     @app.get("/", response_class=HTMLResponse)
     async def get_root(request: Request) -> Any:
-        return templates.TemplateResponse("root.html.j2", {"request": request})
+        return templates.TemplateResponse("root.html", {"request": request})
 
     # returns the match
     @app.post("/matches/", response_class=HTMLResponse)
@@ -103,14 +103,14 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
             response.headers["HX-PUSH-URL"] = f"/matches/{match.id}/"
 
         return templates.TemplateResponse(
-            "connect4_match.html.j2",
+            "connect4_match.html",
             {"request": request, "match": match},
             block_name=block_name,
         )
 
     # returns the match
     @app.get("/matches/{match_id}/", response_class=HTMLResponse)
-    async def get_match(request: Request, response: Response, match_id: int) -> Any:
+    async def get_match(request: Request, _response: Response, match_id: int) -> Any:
         hx_request = request.headers.get("hx-request") == "true"
 
         match = await service.get_match(database, match_id)
@@ -121,7 +121,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
             # response.headers["HX-PUSH-URL"] = f"/matches/{match.id}/"
 
         return templates.TemplateResponse(
-            "connect4_match.html.j2",
+            "connect4_match.html",
             {"request": request, "match": match},
             block_name=block_name,
         )
@@ -148,7 +148,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
             # response.headers["HX-PUSH-URL"] = f"/matches/{match.id}/"
 
         return templates.TemplateResponse(
-            "connect4_match.html.j2",
+            "connect4_match.html",
             {"request": request, "match": match},
             block_name=block_name,
         )
@@ -162,25 +162,25 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
 
 
 def app() -> FastAPI:
-    DATABASE_URL = os.environ.get("DATABASE_URL")
-    assert DATABASE_URL is not None
+    database_url = os.environ.get("DATABASE_URL")
+    assert database_url is not None
 
-    database = databases.Database(DATABASE_URL)
+    database = databases.Database(database_url)
 
-    SENTRY_DSN = os.environ.get("SENTRY_DSN")
-    SENTRY_ENVIRONMENT = os.environ.get("SENTRY_ENVIRONMENT")
+    sentry_dsn = os.environ.get("SENTRY_DSN")
+    sentry_environment = os.environ.get("SENTRY_ENVIRONMENT")
 
-    if SENTRY_DSN is not None and SENTRY_ENVIRONMENT is not None:
+    if sentry_dsn is not None and sentry_environment is not None:
         sentry_sdk.init(
-            dsn=SENTRY_DSN,
-            environment=SENTRY_ENVIRONMENT,
+            dsn=sentry_dsn,
+            environment=sentry_environment,
             # Set traces_sample_rate to 1.0 to capture 100%
             # of transactions for performance monitoring.
             # We recommend adjusting this value in production,
             traces_sample_rate=1.0,
         )
 
-    listener = Listener(DATABASE_URL)
+    listener = Listener(database_url)
 
     _app = build_app(database, listener)
 

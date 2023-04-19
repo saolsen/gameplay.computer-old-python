@@ -1,7 +1,7 @@
 [project]
 name = "gameplay"
 authors = [
-    {name="Steve Olsen", email="steve@steve.computer"},
+    { name = "Steve Olsen", email = "steve@steve.computer" },
 ]
 description = "play games"
 requires-python = "~=3.11"
@@ -17,7 +17,7 @@ dependencies = []
 
 [project.optional-dependencies]
 test = ["pytest"]
-lint = ["black", "mypy", "ruff", "sqlalchemy-stubs"]
+lint = ["black[d]", "mypy", "ruff", "sqlalchemy-stubs"]
 web = [
     "fastapi[all]",
     "sse-starlette",
