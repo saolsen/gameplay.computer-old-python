@@ -2,9 +2,9 @@ import random
 
 from databases import Database
 
+from .. import connect4
 from .schemas import Match, MatchCreate, Turn, TurnCreate
 from .tables import matches, turns
-from .. import connect4
 
 
 def check(match: Match) -> tuple[str, int | None] | None:
