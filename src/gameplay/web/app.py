@@ -125,32 +125,6 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
             },
         )
 
-    @app.get("/", response_class=HTMLResponse)
-    async def get_root(
-        request: Request, user_id: str | None = Depends(get_user)
-    ) -> Any:
-        block_name = request.headers.get("hx-target")
-
-        # print(request.cookies)
-        # session = request.cookies.get("__session")
-        # user_id = None
-        # if session:
-        #     token = jwt.JWT(key=key, jwt=session, expected_type="JWS")
-        #     token.validate(key=key)
-        #     claims = json.loads(token.claims)
-        #     user_id = claims["sub"]
-        #     print(user_id)
-
-        return templates.TemplateResponse(
-            "root.html",
-            {
-                "request": request,
-                "clerk_publishable_key": clerk_publishable_key,
-                "user_id": user_id,
-            },
-            block_name=block_name,
-        )
-
     @app.get("/test", response_class=HTMLResponse)
     async def get_test(request: Request) -> Any:
         block_name = request.headers.get("hx-target")
@@ -162,8 +136,104 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
             block_name=block_name,
         )
 
-    @app.post("/matches/", response_class=HTMLResponse)
+    @app.get("/", response_class=HTMLResponse)
+    async def get_root(
+        request: Request, user_id: str | None = Depends(get_user)
+    ) -> Any:
+        block_name = request.headers.get("hx-target")
+
+        if user_id is not None:
+            matches = await service.get_matches(database, 0)
+
+            return templates.TemplateResponse(
+                "home.html",
+                {
+                    "request": request,
+                    "clerk_publishable_key": clerk_publishable_key,
+                    "user_id": user_id,
+                    "matches": matches,
+                },
+                block_name=block_name,
+            )
+        else:
+            return templates.TemplateResponse(
+                "root.html",
+                {
+                    "request": request,
+                    "clerk_publishable_key": clerk_publishable_key,
+                    "user_id": user_id,
+                },
+                block_name=block_name,
+            )
+
+    @app.get("/games", response_class=HTMLResponse)
+    async def get_games(
+        request: Request, user_id: str | None = Depends(get_user)
+    ) -> Any:
+        block_name = request.headers.get("hx-target")
+
+        return templates.TemplateResponse(
+            "games.html",
+            {
+                "request": request,
+                "clerk_publishable_key": clerk_publishable_key,
+                "user_id": user_id,
+            },
+            block_name=block_name,
+        )
+
+    @app.get("/matches", response_class=HTMLResponse)
+    async def get_matches(
+        request: Request, user_id: str | None = Depends(get_user)
+    ) -> Any:
+        block_name = request.headers.get("hx-target")
+
+        return templates.TemplateResponse(
+            "matches.html",
+            {
+                "request": request,
+                "clerk_publishable_key": clerk_publishable_key,
+                "user_id": user_id,
+            },
+            block_name=block_name,
+        )
+
+    @app.get("/users", response_class=HTMLResponse)
+    async def get_users(
+        request: Request, user_id: str | None = Depends(get_user)
+    ) -> Any:
+        block_name = request.headers.get("hx-target")
+
+        return templates.TemplateResponse(
+            "users.html",
+            {
+                "request": request,
+                "clerk_publishable_key": clerk_publishable_key,
+                "user_id": user_id,
+            },
+            block_name=block_name,
+        )
+
+    @app.get("/agents", response_class=HTMLResponse)
+    async def get_agents(
+        request: Request, user_id: str | None = Depends(get_user)
+    ) -> Any:
+        block_name = request.headers.get("hx-target")
+
+        return templates.TemplateResponse(
+            "agents.html",
+            {
+                "request": request,
+                "clerk_publishable_key": clerk_publishable_key,
+                "user_id": user_id,
+            },
+            block_name=block_name,
+        )
+
+    @app.post("/matches", response_class=HTMLResponse)
     async def create_match(request: Request, response: Response) -> Any:
+        print(await request.form())
+
         block_name = request.headers.get("hx-target")
 
         new_match = schemas.MatchCreate(game="connect4", opponent="ai")
@@ -182,7 +252,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
         )
 
     # returns the match
-    @app.get("/matches/{match_id}/", response_class=HTMLResponse)
+    @app.get("/matches/{match_id}", response_class=HTMLResponse)
     async def get_match(request: Request, _response: Response, match_id: int) -> Any:
         block_name = request.headers.get("hx-target")
 
@@ -199,7 +269,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
         )
 
     # returns the match
-    @app.post("/matches/{match_id}/turns/", response_class=HTMLResponse)
+    @app.post("/matches/{match_id}/turns", response_class=HTMLResponse)
     async def create_turn(
         request: Request,
         response: Response,
@@ -223,7 +293,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
             block_name=block_name,
         )
 
-    @app.get("/matches/{match_id}/changes/", response_class=EventSourceResponse)
+    @app.get("/matches/{match_id}/changes", response_class=EventSourceResponse)
     async def watch_match_changes(request: Request, match_id: int) -> Any:
         fn = listener.listen(match_id)
         return EventSourceResponse(fn())

@@ -1,0 +1,30 @@
+{% extends "_layout.html" %}
+{% block title %}gameplay.computer - agents{% endblock %}
+{% block main %}
+
+<h1>Agents</h1>
+
+<table role="grid">
+    <thead>
+        <tr>
+            <th>@</th>
+            <th>Player</th>
+            <th>Game</th>
+            <th>Wins</th>
+            <th>Losses</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr>
+            <th scope="row">mcts_c4</th>
+            <td>steve</td>
+            <td>connect4</td>
+            <td>5</td>
+            <td>2</td>
+            <td>Online</td>
+        </tr>
+    </tbody>
+</table>
+
+{% endblock %}

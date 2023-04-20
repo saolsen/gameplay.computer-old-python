@@ -20,14 +20,22 @@
 <body>
     <nav class="container-fluid" hx-boost="true" hx-target="#main">
         <ul>
-            <li><strong>gameplay</strong></li>
+            <li><a href="/"><strong>gameplay</strong></a></li>
         </ul>
         <ul>
-            <li><a href="/">Home</a></li>
-            <li><a href="/test">Test</a></li>
+            <li><a href="/games">Games</a></li>
+            <li><a href="/matches">Matches</a></li>
+            <li><a href="/users">Users</a></li>
+            <li><a href="/agents">Agents</a></li>
+            {% if user_id is none %}
+            <li><a href="#" role="button" onclick="window.Clerk.openSignUp()">Sign Up</a></li>
+            <li><a href="#" role="button" onclick="window.Clerk.openSignIn()">Log In</a></li>
+            {% else %}
             <li>
-                <div id="clerk"></div>
+                <div id="clerk" class="logged-in"></div>
             </li>
+            {% endif %}
+            </div>
         </ul>
     </nav>
     <main class="container-fluid" id="main">
@@ -36,20 +44,32 @@
     <script src="https://unpkg.com/htmx.org@1.8.6"></script>
     <script src="https://unpkg.com/htmx.org/dist/ext/sse.js"></script>
     <script src="https://unpkg.com/htmx.org/dist/ext/debug.js"></script>
+    {% if user_id is none %}
     <script>
         async function loadClerk() {
             await window.Clerk.load();
             if (window.Clerk.user) {
-                if (window.loaded_clerk === undefined) {
-                    let ref = document.getElementById("clerk");
-                    window.Clerk.mountUserButton(ref);
-                    window.loaded_clerk = true;
-                }
-            } else {
-                await window.Clerk.openSignUp();
+                window.location.reload();
+            }
+            console.assert(!window.Clerk.user)
+        }
+    </script>
+    {% else %}
+    <script>
+        async function loadClerk() {
+            await window.Clerk.load();
+            console.assert(window.Clerk.user);
+            if (window.loaded_clerk === undefined) {
+                let ref = document.getElementById("clerk");
+                window.Clerk.mountUserButton(ref);
+                // window.Clerk.addListener("signedOut", () => {
+                //     window.location.reload();
+                // });
+                window.loaded_clerk = true;
             }
         }
     </script>
+    {% endif %}
     <script async crossorigin="anonymous" data-clerk-publishable-key="{{ clerk_publishable_key }}" onload="loadClerk()"
         src="https://enhanced-hagfish-21.clerk.accounts.dev/npm/@clerk/clerk-js@4/dist/clerk.browser.js"
         type="text/javascript">

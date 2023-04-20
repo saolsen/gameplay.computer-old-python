@@ -1,0 +1,48 @@
+{% extends "_layout.html" %}
+{% block title %}gameplay.computer - dashboard{% endblock %}
+{% block main %}
+<div class="grid">
+    <div>
+        <h2>Start a Match</h2>
+        <article>
+            <form hx-post="/matches" hx-target="#main">
+                <label for="game">Game
+                    <input id="game" name="game" type="text" value="connect4">
+                </label>
+                <p>You can play yourself, another user or an agent.</p>
+                <p>Blue goes first.</p>
+                <label for="blue_player">Blue Player
+                    <input id="blue_player" name="blue_player" type="text" value="steve">
+                </label>
+                <label for="red_player">Red Player
+                    <input id="red_player" name="red_player" type="text" value="steve">
+                </label>
+                <button>Play</button>
+            </form>
+        </article>
+    </div>
+    <div>
+        <h2>Your Matches</h2>
+        <table role="grid">
+            <thead>
+                <tr>
+                    <th>@</th>
+                    <th>Game</th>
+                    <th>Result</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for match in matches %}
+                <tr>
+                    <th scope="row">{{ match.id }}</th>
+                    <td>{{ match.game }}</td>
+                    <td>{{ match.result }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+{% endblock %}

@@ -1,27 +1,28 @@
 {% extends "_layout.html" %}
-{% block title %}Connect4{% endblock %}
+{% block title %}gameplay.computer{% endblock %}
 {% block main %}
-
-<h1>Connect4 Match {{match.id}}</h1>
-
 {# Subscribe to updates #}
-<div hx-ext="sse" sse-connect="/matches/{{match.id}}/changes/">
-    <div id="match_state" hx-get="/matches/{{match.id}}/" hx-trigger="sse:message" class="grid">
+<div hx-ext="sse" sse-connect="/matches/{{match.id}}/changes">
+    <div id="match_state" hx-get="/matches/{{match.id}}" hx-trigger="sse:message" class="grid">
         {% block match_state %}
         <div>
-            {% if match.winner is not none %}
-            {% if match.winner == 1 %}
-            <h2>You won!</h2>
-            {% elif match.winner == 2 %}
-            <h2>You lost!</h2>
-            {% else %}
-            <h2>It's a tie!</h2>
-            {% endif %}
-            {% elif match.next_player == 1%}
-            <h2>Your turn</h2>
-            {% else %}
-            <h2>Waiting for opponent's turn</h2>
-            {% endif %}
+            <hgroup>
+                <h2>Connect 4</h2>
+                <h3>Match {{match.id}}</h3>
+                {% if match.winner is not none %}
+                {% if match.winner == 1 %}
+                <h4>You won!</h4>
+                {% elif match.winner == 2 %}
+                <h4>You lost!</h4>
+                {% else %}
+                <h4>It's a tie!</h4>
+                {% endif %}
+                {% elif match.next_player == 1%}
+                <h4>Your turn</h4>
+                {% else %}
+                <h4>Waiting for opponent's turn</h4>
+                {% endif %}
+            </hgroup>
 
             {# Build the board with svg. code based on https://codepen.io/rossta/pen/eyrgJe #}
             <svg width="350px" viewBox="0 0 700 700" xmlns="http://www.w3.org/2000/svg">
@@ -39,7 +40,7 @@
                     {% for i in range(0, 8): %}
                     <g>
                         <circle class="turn-marker" cx="{{ i*100 + 50 }}" cy="50" r="45"
-                            hx-post="/matches/{{match.id}}/turns/" hx-target="#match_state"
+                            hx-post="/matches/{{match.id}}/turns" hx-target="#match_state"
                             hx-vals='{"player": 1, "column": {{i}}}'>
                         </circle>
                     </g>

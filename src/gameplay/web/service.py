@@ -157,3 +157,16 @@ async def take_turn(database: Database, match_id: int, new_turn: TurnCreate) -> 
         match = await get_match(database, match_id)
 
     return match
+
+
+async def get_matches(database: Database, user_id: int) -> list[Match]:
+    # todo: filter by user_id
+    user_matches = await database.fetch_all(matches.select())
+    return [Match(**dict(m), turns=[]) for m in user_matches]
+
+
+# Service stuff
+# Users
+# Games
+# Matches
+# Agents
