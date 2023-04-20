@@ -10,11 +10,12 @@ import asyncpg_listen
 import databases
 import sentry_sdk
 from fastapi import BackgroundTasks, Depends, FastAPI, Request, Response
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2_fragments.fastapi import Jinja2Blocks  # type: ignore
 from jwcrypto import jwk, jwt  # type: ignore
 from sse_starlette.sse import EventSourceResponse
+from starlette.datastructures import URL
 
 from . import schemas, service
 
@@ -84,17 +85,18 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
         session = request.cookies.get("__session")
         user_id = None
         if session:
-            token = jwt.JWT(key=key, jwt=session, expected_type="JWS")
-            token.validate(key=key)
-            claims = json.loads(token.claims)
-            user_id = claims["sub"]
-            print(user_id)
+            try:
+                token = jwt.JWT(key=key, jwt=session, expected_type="JWS")
+                token.validate(key=key)
+                claims = json.loads(token.claims)
+                user_id = claims["sub"]
+            except Exception:
+                # todo: redirect/refresh somehow when the token
+                # is expired so we can get a new one and still show the requested
+                # page instead of loading a not logged in page.
+                # prolly 2 handlers one that redirects and one that doesn't
+                pass
         return user_id
-        """ token = req.headers["Authorization"]
-        # Here your code for verifying the token or whatever you use
-        if token is not valid:
-            raise HTTPException(status_code=401, detail="Unauthorized")
-        return True """
 
     app = FastAPI()
 
@@ -111,10 +113,24 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
     app.mount("/static", StaticFiles(directory=web_dir / "static"), name="static")
     templates = Jinja2Blocks(directory=web_dir / "templates")
 
+    @app.get("/health", response_class=HTMLResponse)
+    async def check_health(request: Request) -> Any:
+        assert database.is_connected
+
+        return templates.TemplateResponse(
+            "root.html",
+            {
+                "request": request,
+                "clerk_publishable_key": clerk_publishable_key,
+                "user_id": None,
+            },
+        )
+
     @app.get("/", response_class=HTMLResponse)
     async def get_root(
         request: Request, user_id: str | None = Depends(get_user)
     ) -> Any:
+        print(request.headers)
         # print(request.cookies)
         # session = request.cookies.get("__session")
         # user_id = None
@@ -143,22 +159,29 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
             {"request": request, "clerk_publishable_key": clerk_publishable_key},
         )
 
-    # returns the match
     @app.post("/matches/", response_class=HTMLResponse)
     async def create_match(request: Request, response: Response) -> Any:
         hx_request = request.headers.get("hx-request") == "true"
+        hx_target = request.headers.get("hx-target")
 
         new_match = schemas.MatchCreate(game="connect4", opponent="ai")
         match = await service.create_match(database, new_match)
 
+        RedirectResponse(url=URL(f"/matches/{match.id}"), status_code=302)
+
         block_name = None
         if hx_request:
-            block_name = "main_content"
             response.headers["HX-PUSH-URL"] = f"/matches/{match.id}/"
+        if hx_target:
+            block_name = hx_target
 
         return templates.TemplateResponse(
             "connect4_match.html",
-            {"request": request, "match": match},
+            {
+                "request": request,
+                "clerk_publishable_key": clerk_publishable_key,
+                "match": match,
+            },
             block_name=block_name,
         )
 
@@ -172,11 +195,14 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
         block_name = None
         if hx_request:
             block_name = "match_state"  # todo: dynamic
-            # response.headers["HX-PUSH-URL"] = f"/matches/{match.id}/"
 
         return templates.TemplateResponse(
             "connect4_match.html",
-            {"request": request, "match": match},
+            {
+                "request": request,
+                "clerk_publishable_key": clerk_publishable_key,
+                "match": match,
+            },
             block_name=block_name,
         )
 
@@ -198,12 +224,14 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
         block_name = None
         if hx_request:
             block_name = "match_state"  # todo: dynamic
-            # block_name = "main_content"
-            # response.headers["HX-PUSH-URL"] = f"/matches/{match.id}/"
 
         return templates.TemplateResponse(
             "connect4_match.html",
-            {"request": request, "match": match},
+            {
+                "request": request,
+                "clerk_publishable_key": clerk_publishable_key,
+                "match": match,
+            },
             block_name=block_name,
         )
 

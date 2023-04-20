@@ -2,10 +2,11 @@
 {% block title %}root{% endblock %}
 {% block main %}
 
-<h1>Sup</h1>
+<h1>WAT</h1>
 <p>Play connect4 against an AI ok</p>
 <a href="/test">test</a>
-<button hx-post="/matches/" hx-target="#main_content">Play</button>
+<!-- <button hx-boost="false" hx-post="/matches/" hx-target="#main" hx-swap="innerHTML">Play</button> -->
+<button hx-post="/matches/" hx-target="#main" hx-swap="innerHTML">Play</button>
 
 <span>hello {{user_id}} </span>
 

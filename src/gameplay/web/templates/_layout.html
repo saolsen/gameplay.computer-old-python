@@ -4,6 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- <meta name="htmx-config" content='{"historyCacheSize": 0, "refreshOnHistoryMiss": false}'> -->
     <link href="https://unpkg.com/@picocss/pico@1.5.9/css/pico.min.css" rel="stylesheet">
     <style>
         circle.turn-marker {
@@ -17,8 +18,8 @@
     <title>{% block title %}gameplay{% endblock %}</title>
 </head>
 
-<body hx-boost="true" hx-target="#main" hx-select="#main" hx-swap="outerHtml">
-    <nav class="container-fluid">
+<body>
+    <nav class="container-fluid" hx-boost="true" hx-target="#main" hx-select="#main" hx-swap="outerHTML">
         <ul>
             <li><strong>gameplay</strong></li>
         </ul>
@@ -35,6 +36,7 @@
     </main>
     <script src="https://unpkg.com/htmx.org@1.8.6"></script>
     <script src="https://unpkg.com/htmx.org/dist/ext/sse.js"></script>
+    <script src="https://unpkg.com/htmx.org/dist/ext/debug.js"></script>
     <script>
         let ref = document.getElementById("clerk");
         async function loadClerk() {
