@@ -10,12 +10,11 @@ import asyncpg_listen
 import databases
 import sentry_sdk
 from fastapi import BackgroundTasks, Depends, FastAPI, Request, Response
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2_fragments.fastapi import Jinja2Blocks  # type: ignore
 from jwcrypto import jwk, jwt  # type: ignore
 from sse_starlette.sse import EventSourceResponse
-from starlette.datastructures import URL
 
 from . import schemas, service
 
