@@ -130,7 +130,8 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
     async def get_root(
         request: Request, user_id: str | None = Depends(get_user)
     ) -> Any:
-        print(request.headers)
+        block_name = request.headers.get("hx-target")
+
         # print(request.cookies)
         # session = request.cookies.get("__session")
         # user_id = None
@@ -148,32 +149,28 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
                 "clerk_publishable_key": clerk_publishable_key,
                 "user_id": user_id,
             },
+            block_name=block_name,
         )
 
     @app.get("/test", response_class=HTMLResponse)
     async def get_test(request: Request) -> Any:
+        block_name = request.headers.get("hx-target")
         print(request.cookies)
 
         return templates.TemplateResponse(
             "test.html",
             {"request": request, "clerk_publishable_key": clerk_publishable_key},
+            block_name=block_name,
         )
 
     @app.post("/matches/", response_class=HTMLResponse)
     async def create_match(request: Request, response: Response) -> Any:
-        hx_request = request.headers.get("hx-request") == "true"
-        hx_target = request.headers.get("hx-target")
+        block_name = request.headers.get("hx-target")
 
         new_match = schemas.MatchCreate(game="connect4", opponent="ai")
         match = await service.create_match(database, new_match)
 
-        RedirectResponse(url=URL(f"/matches/{match.id}"), status_code=302)
-
-        block_name = None
-        if hx_request:
-            response.headers["HX-PUSH-URL"] = f"/matches/{match.id}/"
-        if hx_target:
-            block_name = hx_target
+        response.headers["HX-PUSH-URL"] = f"/matches/{match.id}/"
 
         return templates.TemplateResponse(
             "connect4_match.html",
@@ -188,13 +185,9 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
     # returns the match
     @app.get("/matches/{match_id}/", response_class=HTMLResponse)
     async def get_match(request: Request, _response: Response, match_id: int) -> Any:
-        hx_request = request.headers.get("hx-request") == "true"
+        block_name = request.headers.get("hx-target")
 
         match = await service.get_match(database, match_id)
-
-        block_name = None
-        if hx_request:
-            block_name = "match_state"  # todo: dynamic
 
         return templates.TemplateResponse(
             "connect4_match.html",
@@ -215,15 +208,11 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
         match_id: int,
         turn: schemas.TurnCreate = Depends(schemas.TurnCreate.as_form),
     ) -> Any:
-        hx_request = request.headers.get("hx-request") == "true"
+        block_name = request.headers.get("hx-target")
 
         match = await service.take_turn(database, match_id, turn)
         if match.next_player == 2:
             background_tasks.add_task(service.take_ai_turn, database, match_id)
-
-        block_name = None
-        if hx_request:
-            block_name = "match_state"  # todo: dynamic
 
         return templates.TemplateResponse(
             "connect4_match.html",
