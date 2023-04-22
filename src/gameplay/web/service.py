@@ -172,7 +172,7 @@ async def get_match(
         view_turn.state = json.loads(view_turn.state)
 
         turns = []
-        for t in sorted(turns, key=lambda x: x.number):
+        for t in sorted(turn_summarys, key=lambda x: x.number):
             turns.append(
                 Turn(
                     number=t.number,

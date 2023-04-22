@@ -96,8 +96,8 @@ class Player(BaseModel):
 
 class Turn(BaseModel):
     number: int
-    player: int
-    action: Any
+    player: int | None
+    action: Any | None
 
 
 class Match(BaseModel):
