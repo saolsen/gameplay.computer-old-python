@@ -244,6 +244,12 @@ async def take_turn(database: Database, match_id: int, new_turn: TurnCreate) -> 
         )
         await database.execute(query=insert_turn)
 
+        # notify
+        await database.execute(
+            query="select pg_notify('test', :match_id)",
+            values={"match_id": str(match_id)},
+        )
+
         return await get_match(database, match_id)
 
     # async def take_turn(database: Database, match_id: int, new_turn: TurnCreate) -> Match:

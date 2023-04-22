@@ -2,8 +2,7 @@
 {% block title %}gameplay.computer{% endblock %}
 {% block main %}
 {# Subscribe to updates #}
-{#<div hx-ext="sse" sse-connect="/matches/{{match.id}}/changes">#}
-    <div>
+<div hx-ext="sse" sse-connect="/matches/{{match.id}}/changes">
     <div id="match_state" hx-get="/matches/{{match.id}}" hx-trigger="sse:message" class="grid">
         {% block match_state %}
         <div>

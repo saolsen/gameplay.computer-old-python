@@ -296,10 +296,10 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
             block_name=block_name,
         )
 
-    # @app.get("/matches/{match_id}/changes", response_class=EventSourceResponse)
-    # async def watch_match_changes(request: Request, match_id: int) -> Any:
-    #     fn = listener.listen(match_id)
-    #     return EventSourceResponse(fn())
+    @app.get("/matches/{match_id}/changes", response_class=EventSourceResponse)
+    async def watch_match_changes(request: Request, match_id: int) -> Any:
+        fn = listener.listen(match_id)
+        return EventSourceResponse(fn())
 
     return app
 
