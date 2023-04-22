@@ -159,3 +159,4 @@ cython_debug/
 
 todo.txt
 .envrc
+.idea

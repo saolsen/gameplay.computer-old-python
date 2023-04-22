@@ -2,25 +2,28 @@
 {% block title %}gameplay.computer{% endblock %}
 {% block main %}
 {# Subscribe to updates #}
-<div hx-ext="sse" sse-connect="/matches/{{match.id}}/changes">
+{#<div hx-ext="sse" sse-connect="/matches/{{match.id}}/changes">#}
+    <div>
     <div id="match_state" hx-get="/matches/{{match.id}}" hx-trigger="sse:message" class="grid">
         {% block match_state %}
         <div>
             <hgroup>
                 <h2>Connect 4</h2>
                 <h3>Match {{match.id}}</h3>
-                {% if match.winner is not none %}
-                {% if match.winner == 1 %}
-                <h4>You won!</h4>
-                {% elif match.winner == 2 %}
-                <h4>You lost!</h4>
+                {% if match.status == "finished" %}
+                    {% if match.winner == 1 %}
+                        <h4>Blue Wins!</h4>
+                    {% elif match.winner == 2 %}
+                        <h4>Red Wins!</h4>
+                    {% else %}
+                        <h4>It's a tie!</h4>
+                    {% endif %}
                 {% else %}
-                <h4>It's a tie!</h4>
-                {% endif %}
-                {% elif match.next_player == 1%}
-                <h4>Your turn</h4>
-                {% else %}
-                <h4>Waiting for opponent's turn</h4>
+                    {% if match.next_player == 1%}
+                        <h4>Blue's turn</h4>
+                    {% else %}
+                        <h4>Red's Turn</h4>
+                    {% endif %}
                 {% endif %}
             </hgroup>
 
@@ -35,13 +38,13 @@
                         <rect width="100" height="600" fill="url(#cell-pattern)"></rect>
                     </mask>
                 </defs>
-                {% if match.winner is none and match.next_player == 1%}
+                {% if match.status != "finished" %}
                 <svg x="0" y="0">
-                    {% for i in range(0, 8): %}
+                    {% for i in range(0, 8) %}
                     <g>
-                        <circle class="turn-marker" cx="{{ i*100 + 50 }}" cy="50" r="45"
+                        <circle class="turn-marker-{{ match.next_player }}" cx="{{ i*100 + 50 }}" cy="50" r="45"
                             hx-post="/matches/{{match.id}}/turns" hx-target="#match_state"
-                            hx-vals='{"player": 1, "column": {{i}}}'>
+                            hx-vals='{"player": {{ match.next_player }}, "column": {{i}}}'>
                         </circle>
                     </g>
                     {% endfor %}
@@ -68,17 +71,16 @@
                 <ul>
                     {% for turn in match.turns %}
                     {% if turn.player == 1 %}
-                    <li>You: {{turn.column}}</li>
+                    <li>Blue: {{turn.action}}</li>
                     {% else %}
-                    <li>AI: {{turn.column}}</li>
+                    <li>Red: {{turn.action}}</li>
                     {% endif %}
                     {% endfor %}
                 </ul>
                 {% endblock %}
             </div>
         </div>
-    </div>
     {% endblock %}
-</div>
+    </div>
 </div>
 {% endblock %}

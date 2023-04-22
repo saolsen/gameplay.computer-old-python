@@ -15,8 +15,8 @@ Result = Player | Literal["draw"] | None
 
 @dataclass(slots=True)
 class State:
-    board: tuple[list[int], ...]
-    next_player: Player
+    board: list[list[int], ...] = tuple([0] * 6 for _ in range(7))
+    next_player: Player = Player.BLUE
 
     def actions(self) -> list[int]:
         return [i for i in range(7) if self.board[i][5] == 0]

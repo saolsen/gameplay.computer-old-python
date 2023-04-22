@@ -16,7 +16,7 @@ from jinja2_fragments.fastapi import Jinja2Blocks  # type: ignore
 from jwcrypto import jwk, jwt  # type: ignore
 from sse_starlette.sse import EventSourceResponse
 
-from . import schemas, service
+from . import schemas, service, tables
 
 
 class Listener:
@@ -89,7 +89,8 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
                 token.validate(key=key)
                 claims = json.loads(token.claims)
                 user_id = claims["sub"]
-            except Exception:
+            except Exception as e:
+                print(e)
                 # todo: redirect/refresh somehow when the token
                 # is expired so we can get a new one and still show the requested
                 # page instead of loading a not logged in page.
@@ -143,7 +144,8 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
         block_name = request.headers.get("hx-target")
 
         if user_id is not None:
-            matches = await service.get_matches(database, 0)
+            # matches = await service.get_matches(database, 0)
+            matches = []
 
             return templates.TemplateResponse(
                 "home.html",
@@ -231,15 +233,16 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
         )
 
     @app.post("/matches", response_class=HTMLResponse)
-    async def create_match(request: Request, response: Response) -> Any:
-        print(await request.form())
-
+    async def create_match(
+        request: Request,
+        response: Response,
+        new_match: schemas.MatchCreate = Depends(schemas.MatchCreate.as_form),
+    ) -> Any:
         block_name = request.headers.get("hx-target")
 
-        new_match = schemas.MatchCreate(game="connect4", opponent="ai")
-        match = await service.create_match(database, new_match)
-
-        response.headers["HX-PUSH-URL"] = f"/matches/{match.id}/"
+        match_id = await service.create_match(database, new_match)
+        match = await service.get_match(database, match_id)
+        response.headers["HX-PUSH-URL"] = f"/matches/{match_id}/"
 
         return templates.TemplateResponse(
             "connect4_match.html",
@@ -280,8 +283,8 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
         block_name = request.headers.get("hx-target")
 
         match = await service.take_turn(database, match_id, turn)
-        if match.next_player == 2:
-            background_tasks.add_task(service.take_ai_turn, database, match_id)
+        # if match.next_player == 2:
+        #    background_tasks.add_task(service.take_ai_turn, database, match_id)
 
         return templates.TemplateResponse(
             "connect4_match.html",
@@ -293,10 +296,10 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
             block_name=block_name,
         )
 
-    @app.get("/matches/{match_id}/changes", response_class=EventSourceResponse)
-    async def watch_match_changes(request: Request, match_id: int) -> Any:
-        fn = listener.listen(match_id)
-        return EventSourceResponse(fn())
+    # @app.get("/matches/{match_id}/changes", response_class=EventSourceResponse)
+    # async def watch_match_changes(request: Request, match_id: int) -> Any:
+    #     fn = listener.listen(match_id)
+    #     return EventSourceResponse(fn())
 
     return app
 
