@@ -38,13 +38,42 @@ class GameRecord(GameBase):
 
 class MatchCreate(BaseModel):
     game: Literal["connect4"]
-    players: list[str]
+    player_type_1: Literal["me", "user", "agent"]
+    player_name_1: str
+    player_type_2: Literal["me", "user", "agent"]
+    player_name_2: str
 
     @classmethod
     def as_form(
-        cls, game: Literal["connect4"] = Form(...), players: list[str] = Form(...)
+        cls,
+        game: Literal["connect4"] = Form(...),
+        player_type_1: Literal["me", "user", "agent"] = Form(...),
+        player_name_1: str = Form(...),
+        player_type_2: Literal["me", "user", "agent"] = Form(...),
+        player_name_2: str = Form(...),
     ) -> Self:
-        return cls(game=game, players=players)
+        return cls(
+            game=game,
+            player_type_1=player_type_1,
+            player_name_1=player_name_1,
+            player_type_2=player_type_2,
+            player_name_2=player_name_2,
+        )
+
+
+class MatchSummaryRecord(BaseModel):
+    id: int
+    game_name: str
+    blue: str
+    red: str
+    status: Literal["new", "in_progress", "finished"]
+    winner: int | None
+    updated_at: datetime
+    next_player: int | None
+    is_next_player: bool
+
+    class Config:
+        orm_mode = True
 
 
 class MatchRecord(BaseModel):

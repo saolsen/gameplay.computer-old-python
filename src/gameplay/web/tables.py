@@ -24,6 +24,12 @@ matches = sqlalchemy.Table(
         sqlalchemy.Enum("new", "in_progress", "finished", name="match_status"),
     ),
     sqlalchemy.Column(
+        "turn",
+        sqlalchemy.Integer,
+        nullable=False,
+    ),
+    sqlalchemy.Column("next_player", sqlalchemy.Integer),
+    sqlalchemy.Column(
         "winner",
         sqlalchemy.Integer,
     ),
@@ -50,7 +56,9 @@ match_players = sqlalchemy.Table(
     sqlalchemy.Column("number", sqlalchemy.Integer, nullable=False, primary_key=True),
     sqlalchemy.Column("user_id", sqlalchemy.String),
     sqlalchemy.Column("agent_id", sqlalchemy.BigInteger),
-    sqlalchemy.CheckConstraint("user_id IS NOT NULL OR agent_id IS NOT NULL"),
+    sqlalchemy.CheckConstraint(
+        "(user_id IS NOT NULL and agent_id IS NULL) OR (user_id IS NULL and agent_id IS NOT NULL)"
+    ),
     sqlalchemy.CheckConstraint("number > 0"),
 )
 
@@ -87,3 +95,13 @@ match_turns = sqlalchemy.Table(
     ),
     sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=False),
 )
+
+agents = sqlalchemy.Table(
+    "agents",
+    metadata,
+    sqlalchemy.Column("id", sqlalchemy.BigInteger, primary_key=True),
+    sqlalchemy.Column("user_id", sqlalchemy.String, nullable=False, index=True),
+    sqlalchemy.Column("name", sqlalchemy.String, unique=True, index=True),
+    sqlalchemy.UniqueConstraint("user_id", "name"),
+)
+# todo: an agent should be for a specific game.

@@ -19,6 +19,22 @@ from sse_starlette.sse import EventSourceResponse
 from . import schemas, service, tables
 
 
+async def run_ai_turns(database: databases.Database, match_id: int):
+    while True:
+        async with database.transaction():
+            match = await service.get_match(database, match_id)
+
+            if (
+                match.next_player is not None
+                and match.players[match.next_player].agentname is not None
+            ):
+                await service.take_ai_turn(
+                    database, match_id, match.players[match.next_player].agentname
+                )
+            else:
+                break
+
+
 class Listener:
     def __init__(self, database_url: str):
         self.database_url = database_url
@@ -137,6 +153,58 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
             block_name=block_name,
         )
 
+    @app.get("/selects", response_class=HTMLResponse)
+    async def get_selects(
+        request: Request, user_id: str | None = Depends(get_user)
+    ) -> Any:
+        assert user_id is not None
+        user = await service.get_clerk_user_by_id(user_id)
+        username = user.username
+
+        if "player_type_1" in request.query_params:
+            player_type = request.query_params["player_type_1"]
+            n = 1
+            player = "blue"
+        elif "player_type_2" in request.query_params:
+            player_type = request.query_params["player_type_2"]
+            n = 2
+            player = "red"
+        else:
+            return None
+
+        match player_type:
+            case "me":
+                return (
+                    f'<input name="player_name_{n}" type="hidden" value="{username}">'
+                )
+            case "user":
+                users = await service.get_clerk_users()
+                options = [
+                    f'<option value="{user.username}">{user.username}</option>'
+                    for user in users
+                    if user.username != username
+                ]
+
+                return f"""
+                <label for="{player}_player">Username</label>
+                <select name="player_name_{n}" id="{player}_player">
+                {"".join(options)}
+                </select>
+                """
+            case "agent":
+                agents = ["steve/random"]
+                options = [
+                    f'<option value="{agent}">{agent}</option>' for agent in agents
+                ]
+                return f"""
+                <label for="{player}_player">Username</label>
+                <select name="player_name_{n}" id="{player}_player">
+                {"".join(options)}
+                </select>
+                """
+            case _:
+                return None
+
     @app.get("/", response_class=HTMLResponse)
     async def get_root(
         request: Request, user_id: str | None = Depends(get_user)
@@ -144,8 +212,11 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
         block_name = request.headers.get("hx-target")
 
         if user_id is not None:
-            # matches = await service.get_matches(database, 0)
-            matches = []
+            assert user_id is not None
+            user = await service.get_clerk_user_by_id(user_id)
+            username = user.username
+
+            matches = await service.get_matches(database, user_id)
 
             return templates.TemplateResponse(
                 "home.html",
@@ -153,6 +224,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
                     "request": request,
                     "clerk_publishable_key": clerk_publishable_key,
                     "user_id": user_id,
+                    "username": username,
                     "matches": matches,
                 },
                 block_name=block_name,
@@ -176,22 +248,6 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
 
         return templates.TemplateResponse(
             "games.html",
-            {
-                "request": request,
-                "clerk_publishable_key": clerk_publishable_key,
-                "user_id": user_id,
-            },
-            block_name=block_name,
-        )
-
-    @app.get("/matches", response_class=HTMLResponse)
-    async def get_matches(
-        request: Request, user_id: str | None = Depends(get_user)
-    ) -> Any:
-        block_name = request.headers.get("hx-target")
-
-        return templates.TemplateResponse(
-            "matches.html",
             {
                 "request": request,
                 "clerk_publishable_key": clerk_publishable_key,
@@ -234,14 +290,22 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
 
     @app.post("/matches", response_class=HTMLResponse)
     async def create_match(
+        background_tasks: BackgroundTasks,
         request: Request,
         response: Response,
+        user_id: str | None = Depends(get_user),
         new_match: schemas.MatchCreate = Depends(schemas.MatchCreate.as_form),
     ) -> Any:
+        assert user_id is not None
+        user = await service.get_clerk_user_by_id(user_id)
+        username = user.username
         block_name = request.headers.get("hx-target")
 
-        match_id = await service.create_match(database, new_match)
+        match_id = await service.create_match(user_id, database, new_match)
         match = await service.get_match(database, match_id)
+
+        background_tasks.add_task(run_ai_turns, database, match_id)
+
         response.headers["HX-PUSH-URL"] = f"/matches/{match_id}/"
 
         return templates.TemplateResponse(
@@ -250,13 +314,22 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
                 "request": request,
                 "clerk_publishable_key": clerk_publishable_key,
                 "match": match,
+                "username": username,
             },
             block_name=block_name,
         )
 
     # returns the match
     @app.get("/matches/{match_id}", response_class=HTMLResponse)
-    async def get_match(request: Request, _response: Response, match_id: int) -> Any:
+    async def get_match(
+        request: Request,
+        _response: Response,
+        match_id: int,
+        user_id: str | None = Depends(get_user),
+    ) -> Any:
+        assert user_id is not None
+        user = await service.get_clerk_user_by_id(user_id)
+        username = user.username
         block_name = request.headers.get("hx-target")
 
         match = await service.get_match(database, match_id)
@@ -267,6 +340,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
                 "request": request,
                 "clerk_publishable_key": clerk_publishable_key,
                 "match": match,
+                "username": username,
             },
             block_name=block_name,
         )
@@ -274,17 +348,20 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
     # returns the match
     @app.post("/matches/{match_id}/turns", response_class=HTMLResponse)
     async def create_turn(
+        background_tasks: BackgroundTasks,
         request: Request,
         response: Response,
-        background_tasks: BackgroundTasks,
         match_id: int,
         turn: schemas.TurnCreate = Depends(schemas.TurnCreate.as_form),
+        user_id: str | None = Depends(get_user),
     ) -> Any:
+        assert user_id is not None
+        user = await service.get_clerk_user_by_id(user_id)
+        username = user.username
         block_name = request.headers.get("hx-target")
 
-        match = await service.take_turn(database, match_id, turn)
-        # if match.next_player == 2:
-        #    background_tasks.add_task(service.take_ai_turn, database, match_id)
+        match = await service.take_turn(database, match_id, turn, user_id=user_id)
+        background_tasks.add_task(run_ai_turns, database, match_id)
 
         return templates.TemplateResponse(
             "connect4_match.html",
@@ -292,6 +369,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
                 "request": request,
                 "clerk_publishable_key": clerk_publishable_key,
                 "match": match,
+                "username": username,
             },
             block_name=block_name,
         )
