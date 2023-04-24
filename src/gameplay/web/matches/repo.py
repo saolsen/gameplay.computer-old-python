@@ -183,7 +183,6 @@ async def list_match_summaries_for_user(
     )
     matches = []
     for match in matches_r:
-        blue = None
         if match["blue_user_id"] is not None:
             blue_user = await ur.get_user_by_id(match["blue_user_id"])
             assert blue_user is not None
@@ -193,7 +192,6 @@ async def list_match_summaries_for_user(
             assert blue_user is not None
             blue = f"{blue_user.username}/{match['blue_agent_name']}"
 
-        red = None
         if match["red_user_id"] is not None:
             red_user = await ur.get_user_by_id(match["red_user_id"])
             assert red_user is not None

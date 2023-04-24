@@ -12,8 +12,10 @@ class Player(IntEnum):
 
 Result = Player | Literal["draw"] | None
 
+
 def initial_state() -> list[list[int]]:
     return list([0] * 6 for _ in range(7))
+
 
 @dataclass(slots=True)
 class State:

@@ -7,6 +7,7 @@ from httpx import AsyncClient
 
 from gameplay.web.app import Listener, build_app
 
+
 @pytest.fixture
 def anyio_backend() -> str:
     return "asyncio"
