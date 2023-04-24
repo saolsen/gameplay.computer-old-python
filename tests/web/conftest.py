@@ -7,7 +7,6 @@ from httpx import AsyncClient
 
 from gameplay.web.app import Listener, build_app
 
-
 @pytest.fixture
 def anyio_backend() -> str:
     return "asyncio"
@@ -21,7 +20,7 @@ def database_url() -> str:
 
 
 # NOTE: Migrations are not run as part of the tests, assumes the test database
-# exists and is up to date.
+# exists and is up-to-date.
 @pytest.fixture
 async def database(
     anyio_backend: str, database_url: str

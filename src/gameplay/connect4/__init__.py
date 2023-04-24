@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import IntEnum
 from typing import Literal
 
@@ -12,10 +12,12 @@ class Player(IntEnum):
 
 Result = Player | Literal["draw"] | None
 
+def initial_state() -> list[list[int]]:
+    return list([0] * 6 for _ in range(7))
 
 @dataclass(slots=True)
 class State:
-    board: list[list[int]] = list([0] * 6 for _ in range(7))
+    board: list[list[int]] = field(default_factory=initial_state)
     next_player: Player = Player.BLUE
 
     def actions(self) -> list[int]:
