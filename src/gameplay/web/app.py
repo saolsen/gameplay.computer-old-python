@@ -216,10 +216,10 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
         if user_id is not None:
             assert user_id is not None
             user = await service.get_clerk_user_by_id(user_id)
+            assert user is not None
             username = user.username
 
-            # matches = await service.get_matches(database, user_id)
-            matches = []
+            matches = await service.get_matches(database, user_id)
 
             return templates.TemplateResponse(
                 "home.html",

@@ -82,8 +82,8 @@ async def get_matches(database: Database, user_id: str) -> list[MatchSummaryReco
         ) select
             m.id as id,
             g.name as game_name,
-            blue_mp.user_id as blue_user_id, blue_a.name as blue_agent_name, blue_a.user_id as blue_agent_user_id,
-            red_mp.user_id as red_user_id, red_a.name as red_agent_name, red_a.user_id as red_agent_user_id,
+            blue_mp.user_id as blue_user_id, blue_a.agentname as blue_agent_name, blue_a.user_id as blue_agent_user_id,
+            red_mp.user_id as red_user_id, red_a.agentname as red_agent_name, red_a.user_id as red_agent_user_id,
             m.status,
             mt.next_player,
             mt.created_at as last_turn_at,
