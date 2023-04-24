@@ -4,7 +4,11 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from gameplay.web import tables
+import gameplay.web
+from gameplay.web.common.tables import games, agents
+from gameplay.web.matches.tables import matches, match_players, match_turns
+
+tables = [games, agents, matches, match_players, match_turns]
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -27,7 +31,7 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = tables.metadata
+target_metadata = gameplay.web.common.tables.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

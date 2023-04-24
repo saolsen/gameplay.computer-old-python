@@ -16,21 +16,22 @@ from jinja2_fragments.fastapi import Jinja2Blocks  # type: ignore
 from jwcrypto import jwk, jwt  # type: ignore
 from sse_starlette.sse import EventSourceResponse
 
-from . import schemas, service, tables
+from . import schemas, service
+
+from .common import schemas as cs
 
 
-async def run_ai_turns(database: databases.Database, match_id: int):
+async def run_ai_turns(database: databases.Database, match_id: int) -> None:
     while True:
         async with database.transaction():
             match = await service.get_match(database, match_id)
 
             if (
-                match.next_player is not None
-                and match.players[match.next_player].agentname is not None
+                match is not None
+                and match.next_player is not None
+                and isinstance(match.players[match.next_player], cs.Agent)
             ):
-                await service.take_ai_turn(
-                    database, match_id, match.players[match.next_player].agentname
-                )
+                await service.take_ai_turn(database, match_id)
             else:
                 break
 
@@ -159,6 +160,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
     ) -> Any:
         assert user_id is not None
         user = await service.get_clerk_user_by_id(user_id)
+        assert user is not None
         username = user.username
 
         if "player_type_1" in request.query_params:
@@ -216,7 +218,8 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
             user = await service.get_clerk_user_by_id(user_id)
             username = user.username
 
-            matches = await service.get_matches(database, user_id)
+            # matches = await service.get_matches(database, user_id)
+            matches = []
 
             return templates.TemplateResponse(
                 "home.html",
@@ -298,6 +301,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
     ) -> Any:
         assert user_id is not None
         user = await service.get_clerk_user_by_id(user_id)
+        assert user is not None
         username = user.username
         block_name = request.headers.get("hx-target")
 
@@ -357,6 +361,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
     ) -> Any:
         assert user_id is not None
         user = await service.get_clerk_user_by_id(user_id)
+        assert user is not None
         username = user.username
         block_name = request.headers.get("hx-target")
 

@@ -19,81 +19,42 @@ from .schemas import (
     GameRecord,
     ClerkUserRecord,
     PlayerRecord,
-    Match,
     Turn,
     Player,
     MatchRecord,
     TurnRecord,
     TurnCreate,
 )
-from . import tables
+
+# TODO: we don't wanna import any tables in service,
+# that's sorta how we know we're doing well.
+
+from .common import repo as common_repo
+from .common import tables as common_tables
+from .common import schemas as common_schemas
+
+from .users import schemas as users_schemas
+from .users import repo as users_repo
+
+from .matches import tables as matches_tables
+from .matches import repo as matches_repo
+from .matches import schemas as matches_schemas
 
 
-# todo: maybe a seperation between data access stuff like this
-# and more "servicery stuff"
-async def get_game_record(database: Database, name: str) -> GameRecord | None:
-    game = await database.fetch_one(
-        query=tables.games.select().where(tables.games.c.name == name)
-    )
-    if game:
-        return GameRecord.from_orm(game)
-    return None
+# Stubs to keep app working.
+async def get_clerk_users() -> list[users_schemas.User]:
+    return await users_repo.list_users()
 
 
-# suuuuuuuper shit cache, make better pls
-_users_cache = []
-_cache_updated: datetime.datetime | None = None
-
-
-async def update_cache(force=False) -> None:
-    global _users_cache
-    global _cache_updated
-    now = datetime.datetime.utcnow()
-    if (
-        force
-        or _cache_updated is None
-        or (now - _cache_updated) > datetime.timedelta(minutes=1)
-    ):
-        api_key = os.environ.get("CLERK_SECRET_KEY")
-        headers = {"Authorization": f"Bearer {api_key}"}
-        clerk_users = []
-        async with httpx.AsyncClient(headers=headers) as client:
-            users = await client.get("https://api.clerk.dev/v1/users")
-            users.raise_for_status()
-            users = users.json()
-            for user in users:
-                clerk_users.append(ClerkUserRecord(**user))
-        _users_cache = clerk_users
-        _cache_updated = now
-
-
-async def get_clerk_users(force=False) -> list[ClerkUserRecord]:
-    await update_cache(force)
-    return _users_cache
-
-
-async def get_clerk_user_by_id(user_id: str, force=False) -> ClerkUserRecord:
-    users = await get_clerk_users(force=force)
-    for user in users:
-        if user.id == user_id:
-            return user
-    # bust cache and try again
-    if not force:
-        return await get_clerk_user_by_id(user_id, force=True)
-
-
-async def get_clerk_user_username(username: str, force=False) -> ClerkUserRecord:
-    users = await get_clerk_users(force=force)
-    for user in users:
-        if user.username == username:
-            return user
-    if not force:
-        return await get_clerk_user_username(username, force=True)
+async def get_clerk_user_by_id(user_id: str) -> users_schemas.User | None:
+    return await users_repo.get_user_by_id(user_id)
 
 
 async def get_match_record(database: Database, match_id: int) -> MatchRecord | None:
     match = await database.fetch_one(
-        query=tables.matches.select().where(tables.matches.c.id == match_id)
+        query=matches_tables.matches.select().where(
+            matches_tables.matches.c.id == match_id
+        )
     )
     if match:
         return MatchRecord.from_orm(match)
@@ -149,18 +110,18 @@ async def get_matches(database: Database, user_id: str) -> list[MatchSummaryReco
     for match in matches:
         blue = None
         if match.blue_user_id is not None:
-            blue_user = await get_clerk_user_by_id(match.blue_user_id)
+            blue_user = await users_repo.get_user_by_id(match.blue_user_id)
             blue = blue_user.username
         else:
-            blue_user = await get_clerk_user_by_id(match.blue_agent_user_id)
+            blue_user = await users_repo.get_user_by_id(match.blue_agent_user_id)
             blue = f"{blue_user.username}/{match.blue_agent_name}"
 
         red = None
         if match.red_user_id is not None:
-            red_user = await get_clerk_user_by_id(match.red_user_id)
+            red_user = await users_repo.get_user_by_id(match.red_user_id)
             red = red_user.username
         else:
-            red_user = await get_clerk_user_by_id(match.red_agent_user_id)
+            red_user = await users_repo.get_user_by_id(match.red_agent_user_id)
             red = f"{red_user.username}/{match.red_agent_name}"
 
         match_summaries.append(
@@ -184,18 +145,45 @@ async def create_match(
     created_by: str, database: Database, new_match: MatchCreate
 ) -> int:
     async with database.transaction():
-        # game
-        game_record = await get_game_record(database, new_match.game)
-        if not game_record:
+        game = await common_repo.get_game_by_name(database, new_match.game)
+        if not game:
             raise ValueError(f"Game {new_match.game} not found")
 
-        clerk_users = await get_clerk_users()
-        created_by_username = None
-        for clerk_user in clerk_users:
-            if clerk_user.id == created_by:
-                created_by_username = clerk_user.username
-                break
-        assert created_by_username is not None
+        # todo
+        created_user = await users_repo.get_user_by_id(created_by)
+        assert created_user is not None
+
+        # players
+
+        new_match_players = [
+            {"type": new_match.player_type_1, "name": new_match.player_name_1},
+            {"type": new_match.player_type_2, "name": new_match.player_name_2},
+        ]
+
+        clerk_users = await users_repo.list_users()
+
+        players: list[users_schemas.User | common_schemas.Agent] = []
+        for new_match_player in new_match_players:
+            type = new_match_player["type"]
+            name = new_match_player["name"]
+            match type:
+                case "me" | "user":
+                    user = await users_repo.get_user_by_username(name)
+                    assert user is not None
+                    players.append(user)
+                case "agent":
+                    username, agentname = name.split("/")
+                    user = await users_repo.get_user_by_username(username)
+                    assert user is not None
+                    agent = await common_repo.get_agent_by_user_id_and_name(
+                        database, user.id, agentname
+                    )
+                    assert agent is not None
+                    players.append(agent)
+                case _ as unknown:
+                    assert_never(unknown)
+
+        created_by_username = created_user.username
 
         # Some janky authorization, this should actually be done in the form so
         # the user gets error messages.
@@ -215,89 +203,16 @@ async def create_match(
         if new_match.player_type_1 == "agent" and new_match.player_type_2 == "user":
             assert False, "You have to be one of the players."
 
-        # players
-
-        new_match_players = [
-            {"type": new_match.player_type_1, "name": new_match.player_name_1},
-            {"type": new_match.player_type_2, "name": new_match.player_name_2},
-        ]
-
-        players = []
-        for new_match_player in new_match_players:
-            type = new_match_player["type"]
-            name = new_match_player["name"]
-            match type:
-                case "me" | "user":
-                    clerk_id = None
-                    for clerk_user in clerk_users:
-                        if clerk_user.username == name:
-                            clerk_id = clerk_user.id
-                            break
-                    assert clerk_id is not None
-                    players.append(("user", clerk_id))
-                case "agent":
-                    username, agentname = name.split("/")
-                    clerk_id = None
-                    for clerk_user in clerk_users:
-                        if clerk_user.username == username:
-                            clerk_id = clerk_user.id
-                            break
-                    assert clerk_id is not None
-
-                    agent = await database.fetch_one(
-                        query=tables.agents.select().where(
-                            tables.agents.c.user_id == clerk_id
-                            and tables.agents.c.name == agentname
-                        )
-                    )
-                    assert agent is not None
-                    assert "id" in agent
-                    players.append(("agent", agent["id"]))
-
-                case _ as unknown:
-                    assert_never(unknown)
-
-        assert game_record.name == "connect4"
+        assert game.name == "connect4"
         state = connect4.State()
 
-        create_match = tables.matches.insert().values(
-            game_id=game_record.id,
-            status="in_progress",
-            created_by=created_by,
-            created_at=sqlalchemy.func.now(),
-            finished_at=None,
-        )
-        match_id = await database.execute(query=create_match)
-
-        for i, player in enumerate(players):
-            user_id = None
-            agent_id = None
-            type, id = player
-            match type:
-                case "user":
-                    user_id = id
-                case "agent":
-                    agent_id = id
-                case _ as unknown:
-                    assert_never(unknown)
-            await database.execute(
-                query=tables.match_players.insert().values(
-                    match_id=match_id,
-                    number=i + 1,
-                    user_id=user_id,
-                    agent_id=agent_id,
-                )
-            )
-
-        await database.execute(
-            query=tables.match_turns.insert().values(
-                match_id=match_id,
-                number=0,
-                player=None,
-                state=[[0] * 6 for _ in range(7)],
-                next_player=1,
-                created_at=sqlalchemy.func.now(),
-            )
+        match_id = await matches_repo.create_match(
+            database,
+            matches_schemas.CreateMatch(
+                game=game,
+                created_by=created_user,
+                players=players,
+            ),
         )
 
     return match_id
@@ -305,115 +220,23 @@ async def create_match(
 
 async def get_match(
     database: Database, match_id: int, turn: int | None = None
-) -> Match | None:
-    async with database.transaction():
-        match = await get_match_record(database, match_id)
-
-        mr = await database.fetch_one(
-            tables.matches.select().where(tables.matches.c.id == match_id)
-        )
-        if mr is None:
-            return None
-        match_record = MatchRecord.from_orm(mr)
-
-        prs = await database.fetch_all(
-            tables.match_players.select().where(
-                tables.match_players.c.match_id == match_id
-            )
-        )
-        player_records = [PlayerRecord.from_orm(p) for p in prs]
-
-        # hack
-        # todo: we have to join this one, ugh
-        players = {}
-        for p in player_records:
-            username = None
-            agentname = None
-            user_id = p.user_id
-            if user_id is not None:
-                user = await get_clerk_user_by_id(user_id)
-                username = user.username
-            elif p.agent_id is not None:
-                agent = await database.fetch_one(
-                    tables.agents.select().where(tables.agents.c.id == p.agent_id)
-                )
-                user = await get_clerk_user_by_id(agent.user_id)
-                agentname = f"{user.username}/{agent.name}"
-
-            players[p.number] = Player(
-                number=p.number,
-                username=username,
-                agentname=agentname,
-            )
-
-        tss = await database.fetch_all(
-            # todo: how do I pick the columns to query?
-            tables.match_turns.select().where(
-                tables.match_turns.c.match_id == match_id,
-            )
-        )
-        turn_summarys = [TurnSummaryRecord.from_orm(ts) for ts in tss]
-
-        if turn is None:
-            turn = max((ts.number for ts in turn_summarys))
-
-        tr = await database.fetch_one(
-            tables.match_turns.select().where(
-                tables.match_turns.c.match_id == match_id,
-                tables.match_turns.c.number == turn,
-            )
-        )
-        assert tr is not None
-        view_turn = TurnRecord.from_orm(tr)
-        view_turn.state = json.loads(view_turn.state)
-
-        turns = []
-        for t in sorted(turn_summarys, key=lambda x: x.number):
-            turns.append(
-                Turn(
-                    number=t.number,
-                    player=t.player,
-                    action=t.action,
-                )
-            )
-
-        return Match(
-            id=match_record.id,
-            # todo: game_name join to game
-            game_name="connect4",
-            status=match_record.status,
-            winner=match_record.winner,
-            players=players,
-            turns=turns,
-            turn=turn,
-            next_player=view_turn.next_player,
-            state=view_turn.state,
-        )
+) -> matches_schemas.Match | None:
+    match = await matches_repo.get_match_by_id(database, match_id, turn=turn)
+    return match
 
 
 async def take_ai_turn(
     database: Database,
     match_id: int,
-    agent_name: str,
 ) -> None:
     async with database.transaction():
         match = await get_match(database, match_id)
         assert match is not None
         assert match.next_player is not None
-        assert match.players[match.next_player].agentname == agent_name
+        agent = match.players[match.next_player]
+        assert isinstance(agent, common_schemas.Agent)
 
-        username, agentname = agent_name.split("/")
-        clerk_user = await get_clerk_user_username(username)
-
-        agent = await database.fetch_one(
-            query=tables.agents.select().where(
-                tables.agents.c.user_id == clerk_user.id
-                and tables.agents.c.name == agentname
-            )
-        )
-        assert agent is not None
-        assert "id" in agent
-        agent_id = agent["id"]
+        assert agent.agentname == "random"
 
         # Assuming connect4 and random_agent
         board = match.state
@@ -427,7 +250,7 @@ async def take_ai_turn(
             database,
             match_id,
             TurnCreate(column=column, player=match.next_player),
-            agent_id=agent_id,
+            agent_id=agent.id,
         )
 
 
@@ -437,7 +260,7 @@ async def take_turn(
     new_turn: TurnCreate,
     user_id: str | None = None,
     agent_id: int | None = None,
-) -> Match:
+) -> matches_schemas.Match:
     # todo: better way to handle this
     assert user_id is not None or agent_id is not None
     assert user_id is None or agent_id is None
@@ -452,7 +275,9 @@ async def take_turn(
         next_player = match.players[match.next_player]
         assert next_player is not None
         if user_id is not None:
-            clerk_user = await get_clerk_user_by_id(user_id)
+            clerk_user = await users_repo.get_user_by_id(user_id)
+            assert clerk_user is not None
+            assert isinstance(next_player, users_schemas.User)
             assert next_player.username == clerk_user.username
         elif agent_id is not None:
             # todo
@@ -466,46 +291,32 @@ async def take_turn(
         assert new_turn.column in state.actions()
 
         result = state.turn(connect4.Player(new_turn.player), new_turn.column)
-        next_player = None
+
+        winner = None
+        next_player_i = None
+
         match result:
             case connect4.Player():
-                await database.execute(
-                    query=tables.matches.update()
-                    .where(tables.matches.c.id == match_id)
-                    .values(
-                        status="finished",
-                        winner=result.value,
-                        finished_at=sqlalchemy.func.now(),
-                    )
-                )
+                winner = result.value
             case "draw":
-                await database.execute(
-                    query=tables.matches.update()
-                    .where(tables.matches.c.id == match_id)
-                    .values(
-                        status="finished",
-                        winner=None,
-                        finished_at=sqlalchemy.func.now(),
-                    )
-                )
+                pass
             case None:
-                next_player = state.next_player.value
+                next_player_i = state.next_player.value
+            case _ as unknown:
+                assert_never(unknown)
 
-        insert_turn = tables.match_turns.insert().values(
-            match_id=match_id,
-            number=match.turn + 1,
-            player=new_turn.player,
-            action=new_turn.column,
-            state=state.board,
-            next_player=next_player,
-            created_at=sqlalchemy.func.now(),
-        )
-        await database.execute(query=insert_turn)
+        await matches_repo.create_match_turn(
+            database,
+            match.id,
+            matches_schemas.CreateTurn(
+                player=new_turn.player,
+                action=new_turn.column,
+                state=state.board,
+                next_player=next_player_i,
+                winner=winner
+            ))
 
-        # notify
-        await database.execute(
-            query="select pg_notify('test', :match_id)",
-            values={"match_id": str(match_id)},
-        )
+        match = await get_match(database, match_id)
+        assert match is not None
 
-        return await get_match(database, match_id)
+    return match

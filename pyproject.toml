@@ -46,6 +46,6 @@ include = [
 ]
 
 [tool.mypy]
-plugins = "sqlmypy"
+plugins = ["sqlmypy", "pydantic.mypy"]
 exclude = "migrations"
 strict = true

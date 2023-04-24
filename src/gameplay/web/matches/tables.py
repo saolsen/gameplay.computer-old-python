@@ -1,17 +1,10 @@
 import sqlalchemy
 
-metadata = sqlalchemy.MetaData()
-
-games = sqlalchemy.Table(
-    "games",
-    metadata,
-    sqlalchemy.Column("id", sqlalchemy.BigInteger, primary_key=True),
-    sqlalchemy.Column("name", sqlalchemy.String, unique=True, index=True),
-)
+from .. import common
 
 matches = sqlalchemy.Table(
     "matches",
-    metadata,
+    common.tables.metadata,
     sqlalchemy.Column("id", sqlalchemy.BigInteger, primary_key=True),
     sqlalchemy.Column(
         "game_id",
@@ -38,7 +31,7 @@ matches = sqlalchemy.Table(
 
 match_players = sqlalchemy.Table(
     "match_players",
-    metadata,
+    common.tables.metadata,
     sqlalchemy.Column(
         "match_id",
         sqlalchemy.BigInteger,
@@ -58,7 +51,7 @@ match_players = sqlalchemy.Table(
 
 match_turns = sqlalchemy.Table(
     "match_turns",
-    metadata,
+    common.tables.metadata,
     sqlalchemy.Column(
         "match_id",
         sqlalchemy.BigInteger,
@@ -88,13 +81,3 @@ match_turns = sqlalchemy.Table(
     ),
     sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=False),
 )
-
-agents = sqlalchemy.Table(
-    "agents",
-    metadata,
-    sqlalchemy.Column("id", sqlalchemy.BigInteger, primary_key=True),
-    sqlalchemy.Column("user_id", sqlalchemy.String, nullable=False, index=True),
-    sqlalchemy.Column("name", sqlalchemy.String, unique=True, index=True),
-    sqlalchemy.UniqueConstraint("user_id", "name"),
-)
-# todo: an agent should be for a specific game.
