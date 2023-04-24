@@ -21,14 +21,8 @@ matches = sqlalchemy.Table(
     ),
     sqlalchemy.Column(
         "status",
-        sqlalchemy.Enum("new", "in_progress", "finished", name="match_status"),
+        sqlalchemy.Enum("in_progress", "finished", name="match_status"),
     ),
-    sqlalchemy.Column(
-        "turn",
-        sqlalchemy.Integer,
-        nullable=False,
-    ),
-    sqlalchemy.Column("next_player", sqlalchemy.Integer),
     sqlalchemy.Column(
         "winner",
         sqlalchemy.Integer,
@@ -39,7 +33,6 @@ matches = sqlalchemy.Table(
         nullable=False,
     ),
     sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=False),
-    sqlalchemy.Column("updated_at", sqlalchemy.DateTime, nullable=False),
     sqlalchemy.Column("finished_at", sqlalchemy.DateTime),
 )
 

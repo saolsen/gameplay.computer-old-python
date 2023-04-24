@@ -68,7 +68,7 @@ class MatchSummaryRecord(BaseModel):
     red: str
     status: Literal["new", "in_progress", "finished"]
     winner: int | None
-    updated_at: datetime
+    last_turn_at: datetime
     next_player: int | None
     is_next_player: bool
 
@@ -83,7 +83,6 @@ class MatchRecord(BaseModel):
     winner: int | None
     created_by: str
     created_at: datetime
-    updated_at: datetime
     finished_at: datetime | None
 
     class Config:
