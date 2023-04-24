@@ -186,7 +186,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
                 ]
 
                 return f"""
-                <label for="{player}_player">Username</label>
+                <label for="{player}_player">username</label>
                 <select name="player_name_{n}" id="{player}_player">
                 {"".join(options)}
                 </select>
@@ -197,7 +197,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
                     f'<option value="{agent}">{agent}</option>' for agent in agents
                 ]
                 return f"""
-                <label for="{player}_player">Username</label>
+                <label for="{player}_player">agentname</label>
                 <select name="player_name_{n}" id="{player}_player">
                 {"".join(options)}
                 </select>
