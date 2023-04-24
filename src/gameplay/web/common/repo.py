@@ -1,7 +1,7 @@
 from databases import Database
 
-from .tables import games, agents
-from .schemas import Game, Agent
+from .schemas import Agent, Game
+from .tables import agents, games
 
 
 async def get_game_by_id(database: Database, game_id: int) -> Game | None:

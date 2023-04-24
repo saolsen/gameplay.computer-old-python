@@ -1,44 +1,22 @@
-import datetime
 import random
-import httpx
-import sqlalchemy
-import os
-import json
 from typing import assert_never
 
 from databases import Database
 
 from .. import connect4
+from .common import repo as common_repo
+from .common import schemas as common_schemas
+from .matches import repo as matches_repo
+from .matches import schemas as matches_schemas
+from .matches import tables as matches_tables
 
 # from .schemas import Match, MatchCreate, Turn, TurnCreate
-from .schemas import (
-    MatchCreate,
-    TurnSummaryRecord,
-    MatchSummaryRecord,
-    GameBase,
-    GameRecord,
-    ClerkUserRecord,
-    PlayerRecord,
-    Turn,
-    Player,
-    MatchRecord,
-    TurnRecord,
-    TurnCreate,
-)
+from .schemas import MatchCreate, MatchRecord, TurnCreate
+from .users import repo as users_repo
+from .users import schemas as users_schemas
 
 # TODO: we don't wanna import any tables in service,
 # that's sorta how we know we're doing well.
-
-from .common import repo as common_repo
-from .common import tables as common_tables
-from .common import schemas as common_schemas
-
-from .users import schemas as users_schemas
-from .users import repo as users_repo
-
-from .matches import tables as matches_tables
-from .matches import repo as matches_repo
-from .matches import schemas as matches_schemas
 
 
 # Stubs to keep app working.
@@ -61,84 +39,10 @@ async def get_match_record(database: Database, match_id: int) -> MatchRecord | N
     return None
 
 
-async def get_matches(database: Database, user_id: str) -> list[MatchSummaryRecord]:
-    matches = await database.fetch_all(
-        query="""
-        with created_matches as (
-            select
-                id as match_id
-            from matches
-            where created_by = :user_id
-        ), playing_matches as (
-            select
-                match_id
-            from match_players
-            where user_id = :user_id
-        ), my_matches as (select *
-                          from created_matches
-                          union
-                          select *
-                          from playing_matches
-        ) select
-            m.id as id,
-            g.name as game_name,
-            blue_mp.user_id as blue_user_id, blue_a.agentname as blue_agent_name, blue_a.user_id as blue_agent_user_id,
-            red_mp.user_id as red_user_id, red_a.agentname as red_agent_name, red_a.user_id as red_agent_user_id,
-            m.status,
-            mt.next_player,
-            mt.created_at as last_turn_at,
-            m.winner,
-            coalesce(next_mp.user_id = :user_id, false) as is_next_player
-        from matches m
-        join games g on m.game_id = g.id
-        
-        join match_turns mt
-        on m.id = mt.match_id
-        and (select max(number) from match_turns where match_id = m.id) = mt.number    
-        
-        left join match_players next_mp on mt.next_player = next_mp.number and m.id = next_mp.match_id
-        join match_players blue_mp on blue_mp.number = 1 and m.id = blue_mp.match_id
-        left join agents blue_a on blue_mp.agent_id = blue_a.id
-        join match_players red_mp on red_mp.number = 2 and m.id = red_mp.match_id
-        left join agents red_a on red_mp.agent_id = red_a.id
-        where m.id in (select * from my_matches)
-        order by is_next_player desc, mt.created_at desc;
-        """,
-        values={"user_id": user_id},
-    )
-    match_summaries = []
-    for match in matches:
-        blue = None
-        if match.blue_user_id is not None:
-            blue_user = await users_repo.get_user_by_id(match.blue_user_id)
-            blue = blue_user.username
-        else:
-            blue_user = await users_repo.get_user_by_id(match.blue_agent_user_id)
-            blue = f"{blue_user.username}/{match.blue_agent_name}"
-
-        red = None
-        if match.red_user_id is not None:
-            red_user = await users_repo.get_user_by_id(match.red_user_id)
-            red = red_user.username
-        else:
-            red_user = await users_repo.get_user_by_id(match.red_agent_user_id)
-            red = f"{red_user.username}/{match.red_agent_name}"
-
-        match_summaries.append(
-            MatchSummaryRecord(
-                id=match.id,
-                game_name=match.game_name,
-                blue=blue,
-                red=red,
-                status=match.status,
-                winner=match.winner,
-                last_turn_at=match.last_turn_at,
-                next_player=match.next_player,
-                is_next_player=match.is_next_player,
-            )
-        )
-
-    return match_summaries
+async def get_matches(
+    database: Database, user_id: str
+) -> list[matches_schemas.MatchSummary]:
+    return await matches_repo.list_match_summaries_for_user(database, user_id)
 
 
 async def create_match(
@@ -156,16 +60,13 @@ async def create_match(
         # players
 
         new_match_players = [
-            {"type": new_match.player_type_1, "name": new_match.player_name_1},
-            {"type": new_match.player_type_2, "name": new_match.player_name_2},
+            (new_match.player_type_1, new_match.player_name_1),
+            (new_match.player_type_2, new_match.player_name_2),
         ]
-
-        clerk_users = await users_repo.list_users()
 
         players: list[users_schemas.User | common_schemas.Agent] = []
         for new_match_player in new_match_players:
-            type = new_match_player["type"]
-            name = new_match_player["name"]
+            type, name = new_match_player
             match type:
                 case "me" | "user":
                     user = await users_repo.get_user_by_username(name)
@@ -180,7 +81,7 @@ async def create_match(
                     )
                     assert agent is not None
                     players.append(agent)
-                case _ as unknown:
+                case _type as unknown:
                     assert_never(unknown)
 
         created_by_username = created_user.username
@@ -204,7 +105,7 @@ async def create_match(
             assert False, "You have to be one of the players."
 
         assert game.name == "connect4"
-        state = connect4.State()
+        connect4.State()
 
         match_id = await matches_repo.create_match(
             database,
@@ -239,7 +140,6 @@ async def take_ai_turn(
         assert agent.agentname == "random"
 
         # Assuming connect4 and random_agent
-        board = match.state
         state = connect4.State(
             board=match.state, next_player=connect4.Player(match.next_player)
         )
@@ -284,7 +184,6 @@ async def take_turn(
             pass
 
         # Assuming connect4
-        board = match.state
         state = connect4.State(
             board=match.state, next_player=connect4.Player(match.next_player)
         )
@@ -302,7 +201,7 @@ async def take_turn(
                 pass
             case None:
                 next_player_i = state.next_player.value
-            case _ as unknown:
+            case _result as unknown:
                 assert_never(unknown)
 
         await matches_repo.create_match_turn(
@@ -313,8 +212,9 @@ async def take_turn(
                 action=new_turn.column,
                 state=state.board,
                 next_player=next_player_i,
-                winner=winner
-            ))
+                winner=winner,
+            ),
+        )
 
         match = await get_match(database, match_id)
         assert match is not None

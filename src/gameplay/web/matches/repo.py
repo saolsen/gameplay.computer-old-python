@@ -1,12 +1,14 @@
+import json
+
 import sqlalchemy
 from databases import Database
-from .tables import matches, match_players, match_turns
-from ..common import schemas as cs
+
 from ..common import repo as cr
-from ..users import schemas as us
+from ..common import schemas as cs
 from ..users import repo as ur
+from ..users import schemas as us
 from .schemas import CreateMatch, CreateTurn, Match, MatchSummary, Turn
-import json
+from .tables import match_players, match_turns, matches
 
 
 async def create_match(database: Database, match: CreateMatch) -> int:
@@ -109,7 +111,7 @@ async def create_match_turn(
                     finished_at = now()
                 where id = :match_id
                 """,
-                values={"match_id": match_id, "winner": turn.winner}
+                values={"match_id": match_id, "winner": turn.winner},
             )
 
         # notify
@@ -119,8 +121,103 @@ async def create_match_turn(
         )
 
 
-async def list_match_summaries_for_user(user_id: str) -> list[MatchSummary]:
-    return []
+async def list_match_summaries_for_user(
+    database: Database, user_id: str
+) -> list[MatchSummary]:
+    matches_r = await database.fetch_all(
+        query="""
+            with created_matches as (
+                select
+                    id as match_id
+                from matches
+                where created_by = :user_id
+            ), playing_matches as (
+                select
+                    match_id
+                from match_players
+                where user_id = :user_id
+            ), my_matches as (select *
+                              from created_matches
+                              union
+                              select *
+                              from playing_matches
+            ) select
+                m.id as id,
+                g.name as game_name,
+                blue_mp.user_id as blue_user_id,
+                blue_a.agentname as blue_agent_name,
+                blue_a.user_id as blue_agent_user_id,
+                red_mp.user_id as red_user_id,
+                red_a.agentname as red_agent_name,
+                red_a.user_id as red_agent_user_id,
+                m.status,
+                mt.next_player,
+                mt.created_at as last_turn_at,
+                m.winner,
+                coalesce(next_mp.user_id = :user_id, false) as is_next_player
+            from matches m
+            join games g on m.game_id = g.id
+
+            join match_turns mt
+            on m.id = mt.match_id
+            and (
+                select max(number)
+                from match_turns
+                where match_id = m.id
+            ) = mt.number    
+
+            left join match_players next_mp
+            on mt.next_player = next_mp.number and m.id = next_mp.match_id
+            join match_players blue_mp
+            on blue_mp.number = 1 and m.id = blue_mp.match_id
+            left join agents blue_a
+            on blue_mp.agent_id = blue_a.id
+            join match_players red_mp
+            on red_mp.number = 2 and m.id = red_mp.match_id
+            left join agents red_a
+            on red_mp.agent_id = red_a.id
+            where m.id in (select * from my_matches)
+            order by is_next_player desc, mt.created_at desc;
+            """,
+        values={"user_id": user_id},
+    )
+    matches = []
+    for match in matches_r:
+        blue = None
+        if match["blue_user_id"] is not None:
+            blue_user = await ur.get_user_by_id(match["blue_user_id"])
+            assert blue_user is not None
+            blue = blue_user.username
+        else:
+            blue_user = await ur.get_user_by_id(match["blue_agent_user_id"])
+            assert blue_user is not None
+            blue = f"{blue_user.username}/{match['blue_agent_name']}"
+
+        red = None
+        if match["red_user_id"] is not None:
+            red_user = await ur.get_user_by_id(match["red_user_id"])
+            assert red_user is not None
+            red = red_user.username
+        else:
+            red_user = await ur.get_user_by_id(match["red_agent_user_id"])
+            assert red_user is not None
+            red = f"{red_user.username}/{match['red_agent_name']}"
+
+        matches.append(
+            MatchSummary(
+                id=match["id"],
+                game_name=match["game_name"],
+                blue=blue,
+                red=red,
+                status=match["status"],
+                winner=match["winner"],
+                last_turn_at=match["last_turn_at"],
+                next_player=match["next_player"],
+                is_next_player=match["is_next_player"],
+            )
+        )
+
+    return matches
 
 
 # Match with players, turns and state?

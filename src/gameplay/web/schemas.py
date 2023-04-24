@@ -1,5 +1,5 @@
-from typing import Literal, Self, Any
 from datetime import datetime
+from typing import Any, Literal, Self
 
 from fastapi import Form
 from pydantic import BaseModel
@@ -66,7 +66,7 @@ class MatchSummaryRecord(BaseModel):
     game_name: str
     blue: str
     red: str
-    status: Literal["new", "in_progress", "finished"]
+    status: Literal["in_progress", "finished"]
     winner: int | None
     last_turn_at: datetime
     next_player: int | None

@@ -5,9 +5,8 @@ Revises:
 Create Date: 2023-04-23 15:25:52.136571
 
 """
-from alembic import op
 import sqlalchemy as sa
-
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision = "5abff25e0f87"
@@ -64,7 +63,9 @@ def upgrade() -> None:
         sa.Column("user_id", sa.String(), nullable=True),
         sa.Column("agent_id", sa.BigInteger(), nullable=True),
         sa.CheckConstraint(
-            "(user_id IS NOT NULL and agent_id IS NULL) OR (user_id IS NULL and agent_id IS NOT NULL)"
+            """
+            (user_id IS NOT NULL and agent_id IS NULL)
+            OR (user_id IS NULL and agent_id IS NOT NULL)"""
         ),
         sa.CheckConstraint("number > 0"),
         sa.ForeignKeyConstraint(

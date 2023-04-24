@@ -17,7 +17,6 @@ from jwcrypto import jwk, jwt  # type: ignore
 from sse_starlette.sse import EventSourceResponse
 
 from . import schemas, service
-
 from .common import schemas as cs
 
 
@@ -333,6 +332,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
     ) -> Any:
         assert user_id is not None
         user = await service.get_clerk_user_by_id(user_id)
+        assert user is not None
         username = user.username
         block_name = request.headers.get("hx-target")
 

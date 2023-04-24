@@ -5,8 +5,8 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 import gameplay.web
-from gameplay.web.common.tables import games, agents
-from gameplay.web.matches.tables import matches, match_players, match_turns
+from gameplay.web.common.tables import agents, games
+from gameplay.web.matches.tables import match_players, match_turns, matches
 
 tables = [games, agents, matches, match_players, match_turns]
 

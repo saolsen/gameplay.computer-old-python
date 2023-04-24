@@ -1,10 +1,10 @@
-from typing import Literal, Self, Any
 from datetime import datetime
+from typing import Any, Literal
 
 # from fastapi import Form
 from pydantic import BaseModel
 
-from ..common.schemas import Game, Agent
+from ..common.schemas import Agent, Game
 from ..users.schemas import User
 
 
@@ -52,17 +52,12 @@ class Match(BaseModel):
 
 
 class MatchSummary(BaseModel):
-    pass
-
-
-# class MatchRecord(BaseModel):
-#     id: int
-#     game_id: int
-#     status: Literal["in_progress", "finished"]
-#     winner: int | None
-#     created_by: str
-#     created_at: datetime
-#     finished_at: datetime | None
-#
-#     class Config:
-#         orm_mode = True
+    id: int
+    game_name: str
+    blue: str
+    red: str
+    status: Literal["in_progress", "finished"]
+    winner: int | None
+    last_turn_at: datetime
+    next_player: int | None
+    is_next_player: bool
