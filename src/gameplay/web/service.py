@@ -9,8 +9,6 @@ from .common import schemas as common_schemas
 from .matches import repo as matches_repo
 from .matches import schemas as matches_schemas
 from .matches import tables as matches_tables
-
-# from .schemas import Match, MatchCreate, Turn, TurnCreate
 from .schemas import MatchCreate, MatchRecord, TurnCreate
 from .users import repo as users_repo
 from .users import schemas as users_schemas
