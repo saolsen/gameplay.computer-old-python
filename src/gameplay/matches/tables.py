@@ -1,10 +1,10 @@
 import sqlalchemy
 
-from .. import common
+from ..common.tables import metadata
 
 matches = sqlalchemy.Table(
     "matches",
-    common.tables.metadata,
+    metadata,
     sqlalchemy.Column("id", sqlalchemy.BigInteger, primary_key=True),
     sqlalchemy.Column(
         "game_id",
@@ -31,7 +31,7 @@ matches = sqlalchemy.Table(
 
 match_players = sqlalchemy.Table(
     "match_players",
-    common.tables.metadata,
+    metadata,
     sqlalchemy.Column(
         "match_id",
         sqlalchemy.BigInteger,
@@ -53,7 +53,7 @@ match_players = sqlalchemy.Table(
 
 match_turns = sqlalchemy.Table(
     "match_turns",
-    common.tables.metadata,
+    metadata,
     sqlalchemy.Column(
         "match_id",
         sqlalchemy.BigInteger,

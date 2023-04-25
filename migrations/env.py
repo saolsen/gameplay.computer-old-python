@@ -5,8 +5,8 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 import gameplay.web
-from gameplay.web.common.tables import agents, games
-from gameplay.web.matches.tables import match_players, match_turns, matches
+from gameplay.common import agents, games
+from gameplay.matches import match_players, match_turns, matches
 
 tables = [games, agents, matches, match_players, match_turns]
 
@@ -31,7 +31,7 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-target_metadata = gameplay.web.common.tables.metadata
+target_metadata = gameplay.common.tables.metadata
 
 # other values from the config, defined by the needs of env.py,
 # can be acquired:

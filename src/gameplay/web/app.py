@@ -16,8 +16,8 @@ from jinja2_fragments.fastapi import Jinja2Blocks  # type: ignore
 from jwcrypto import jwk, jwt  # type: ignore
 from sse_starlette.sse import EventSourceResponse
 
+from ..common import schemas as cs
 from . import schemas, service
-from .common import schemas as cs
 
 
 async def run_ai_turns(database: databases.Database, match_id: int) -> None:

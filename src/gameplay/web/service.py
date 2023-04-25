@@ -4,37 +4,25 @@ from typing import assert_never
 from databases import Database
 
 from .. import connect4
-from .common import repo as common_repo
-from .common import schemas as common_schemas
-from .matches import repo as matches_repo
-from .matches import schemas as matches_schemas
-from .matches import tables as matches_tables
-from .schemas import MatchCreate, MatchRecord, TurnCreate
-from .users import repo as users_repo
-from .users import schemas as users_schemas
+from ..common import repo as common_repo
+from ..common import schemas as common_schemas
+from ..matches import repo as matches_repo
+from ..matches import schemas as matches_schemas
+from ..users import repo as users_repo
+from ..users import schemas as users_schemas
+from ..web.schemas import MatchCreate, TurnCreate
 
 # TODO: we don't wanna import any tables in service,
 # that's sorta how we know we're doing well.
 
 
-# Stubs to keep app working.
+# Stubs to keep web working.
 async def get_clerk_users() -> list[users_schemas.User]:
     return await users_repo.list_users()
 
 
 async def get_clerk_user_by_id(user_id: str) -> users_schemas.User | None:
     return await users_repo.get_user_by_id(user_id)
-
-
-async def get_match_record(database: Database, match_id: int) -> MatchRecord | None:
-    match = await database.fetch_one(
-        query=matches_tables.matches.select().where(
-            matches_tables.matches.c.id == match_id
-        )
-    )
-    if match:
-        return MatchRecord.from_orm(match)
-    return None
 
 
 async def get_matches(
