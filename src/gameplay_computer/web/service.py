@@ -60,10 +60,8 @@ async def create_match(
                     players.append(user)
                 case "agent":
                     username, agentname = name.split("/")
-                    user_id = await users_repo.get_user_id_for_username(username)
-                    assert user_id is not None
-                    agent = await common_repo.get_agent_by_user_id_and_name(
-                        database, user_id, agentname
+                    agent = await common_repo.get_agent_by_username_and_agentname(
+                        database, username, agentname
                     )
                     assert agent is not None
                     players.append(agent)
@@ -125,6 +123,12 @@ async def take_ai_turn(
 
         assert agent.agentname == "random"
 
+        # todo: rework take_turn to not need the id (or something)
+        agent_id = await common_repo.get_agent_id_for_username_and_agentname(
+            database, agent.username, agent.agentname
+        )
+        assert agent_id is not None
+
         # Assuming connect4 and random_agent
         state = connect4.State(
             board=match.state, next_player=connect4.Player(match.next_player)
@@ -136,7 +140,7 @@ async def take_ai_turn(
             database,
             match_id,
             TurnCreate(column=column, player=match.next_player),
-            agent_id=agent.id,
+            agent_id=agent_id,
         )
 
 

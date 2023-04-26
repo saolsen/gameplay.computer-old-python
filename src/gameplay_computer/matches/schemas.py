@@ -1,17 +1,21 @@
 from datetime import datetime
-from typing import Any, Literal
+from typing import Any, Literal, Union, Annotated
 
 # from fastapi import Form
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from ..common.schemas import Agent, Game
 from ..users.schemas import User
 
+Player = Annotated[
+    Union[User, Agent],
+    Field(discrminator="kind")
+]
 
 class CreateMatch(BaseModel):
     game: Game
     created_by: User
-    players: list[User | Agent]
+    players: list[Player]
 
 
 class CreateTurn(BaseModel):

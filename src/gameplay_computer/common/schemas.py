@@ -2,6 +2,8 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+class BasePlayer(BaseModel):
+    kind: Literal["user", "agent"]
 
 class Game(BaseModel):
     id: int
@@ -11,11 +13,8 @@ class Game(BaseModel):
         orm_mode = True
 
 
-class Agent(BaseModel):
-    id: int
-    game_id: int
-    user_id: str
+class Agent(BasePlayer):
+    kind: Literal["agent"] = "agent"
+    game: str
+    username: str
     agentname: str
-
-    class Config:
-        orm_mode = True

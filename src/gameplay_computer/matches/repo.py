@@ -42,12 +42,14 @@ async def create_match(database: Database, match: CreateMatch) -> int:
                         )
                     )
                 case cs.Agent() as agent:
+                    agent_id = await cr.get_agent_id_for_username_and_agentname(database, agent.username, agent.agentname)
+                    assert agent_id is not None
                     await database.execute(
                         query=match_players.insert().values(
                             match_id=match_id,
                             number=i + 1,
                             user_id=None,
-                            agent_id=agent.id,
+                            agent_id=agent_id,
                         )
                     )
 
