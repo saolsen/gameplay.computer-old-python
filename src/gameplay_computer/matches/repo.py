@@ -18,7 +18,7 @@ async def create_match(database: Database, match: CreateMatch) -> int:
         assert created_by_id is not None
         match_id: int = await database.execute(
             query=matches.insert().values(
-                game_id=match.game.id,
+                game=match.game,
                 status="in_progress",
                 winner=None,
                 created_by=created_by_id,
@@ -42,7 +42,9 @@ async def create_match(database: Database, match: CreateMatch) -> int:
                         )
                     )
                 case cs.Agent() as agent:
-                    agent_id = await cr.get_agent_id_for_username_and_agentname(database, agent.username, agent.agentname)
+                    agent_id = await cr.get_agent_id_for_username_and_agentname(
+                        database, agent.username, agent.agentname
+                    )
                     assert agent_id is not None
                     await database.execute(
                         query=match_players.insert().values(
@@ -149,7 +151,7 @@ async def list_match_summaries_for_user(
                               from playing_matches
             ) select
                 m.id as id,
-                g.name as game_name,
+                m.game as game_name,
                 blue_mp.user_id as blue_user_id,
                 blue_a.agentname as blue_agent_name,
                 blue_a.user_id as blue_agent_user_id,
@@ -162,7 +164,6 @@ async def list_match_summaries_for_user(
                 m.winner,
                 coalesce(next_mp.user_id = :user_id, false) as is_next_player
             from matches m
-            join games g on m.game_id = g.id
 
             join match_turns mt
             on m.id = mt.match_id
@@ -267,9 +268,6 @@ async def get_match_by_id(
         latest_turn_r = await database.fetch_one(query=q)
         assert latest_turn_r is not None
 
-        game = await cr.get_game_by_id(database, match_r["game_id"])
-        assert game is not None
-
     created_by = await ur.get_user_by_id(match_r["created_by"])
 
     players: dict[int, us.User | cs.Agent] = {}
@@ -289,7 +287,7 @@ async def get_match_by_id(
 
     match = Match(
         id=match_r["id"],
-        game=game,
+        game="connect4",  # todo
         status=match_r["status"],
         winner=match_r["winner"],
         created_by=created_by,

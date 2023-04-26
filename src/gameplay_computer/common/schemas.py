@@ -2,19 +2,15 @@ from typing import Literal
 
 from pydantic import BaseModel
 
+Game = Literal["connect4"]
+
+
 class BasePlayer(BaseModel):
     kind: Literal["user", "agent"]
-
-class Game(BaseModel):
-    id: int
-    name: Literal["connect4"]
-
-    class Config:
-        orm_mode = True
 
 
 class Agent(BasePlayer):
     kind: Literal["agent"] = "agent"
-    game: str
+    game: Game
     username: str
     agentname: str

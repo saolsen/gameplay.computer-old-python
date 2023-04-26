@@ -35,11 +35,6 @@ async def create_match(
     created_by: str, database: Database, new_match: MatchCreate
 ) -> int:
     async with database.transaction():
-        game = await common_repo.get_game_by_name(database, new_match.game)
-        if not game:
-            raise ValueError(f"Game {new_match.game} not found")
-
-        # todo
         created_user = await users_repo.get_user_by_id(created_by)
         assert created_user is not None
 
@@ -88,13 +83,13 @@ async def create_match(
         if new_match.player_type_1 == "agent" and new_match.player_type_2 == "user":
             assert False, "You have to be one of the players."
 
-        assert game.name == "connect4"
+        assert new_match.game == "connect4"
         connect4.State()
 
         match_id = await matches_repo.create_match(
             database,
             matches_schemas.CreateMatch(
-                game=game,
+                game=new_match.game,
                 created_by=created_user,
                 players=players,
             ),

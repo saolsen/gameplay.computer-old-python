@@ -22,7 +22,9 @@ def mock_users() -> Iterator[None]:
     """
     Mocks the users repo so we don't call the Clerk API during tests.
     """
-    with mock.patch("gameplay_computer.users.repo._list_clerk_users") as mock_list_clerk_users:
+    with mock.patch(
+        "gameplay_computer.users.repo._list_clerk_users"
+    ) as mock_list_clerk_users:
         mock_list_clerk_users.return_value = [
             ClerkUser(
                 id="u_steve",
@@ -31,7 +33,9 @@ def mock_users() -> Iterator[None]:
                 last_name="Olsen",
                 profile_image_url="https://example.com/steve.jpg",
                 email_addresses=[
-                    ClerkEmailAddress(id="email_1", email_address="steve@steve.computer")
+                    ClerkEmailAddress(
+                        id="email_1", email_address="steve@steve.computer"
+                    )
                 ],
                 primary_email_address_id="email_1",
             )

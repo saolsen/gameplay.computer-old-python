@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Literal, Union, Annotated
+from typing import Annotated, Any, Literal, Union
 
 # from fastapi import Form
 from pydantic import BaseModel, Field
@@ -7,10 +7,8 @@ from pydantic import BaseModel, Field
 from ..common.schemas import Agent, Game
 from ..users.schemas import User
 
-Player = Annotated[
-    Union[User, Agent],
-    Field(discrminator="kind")
-]
+Player = Annotated[Union[User, Agent], Field(discrminator="kind")]
+
 
 class CreateMatch(BaseModel):
     game: Game
@@ -57,7 +55,7 @@ class Match(BaseModel):
 
 class MatchSummary(BaseModel):
     id: int
-    game_name: str
+    game_name: Game
     blue: str
     red: str
     status: Literal["in_progress", "finished"]

@@ -1,17 +1,12 @@
 import sqlalchemy
 
-from ..common.tables import metadata
+from ..common.tables import game, metadata
 
 matches = sqlalchemy.Table(
     "matches",
     metadata,
     sqlalchemy.Column("id", sqlalchemy.BigInteger, primary_key=True),
-    sqlalchemy.Column(
-        "game_id",
-        sqlalchemy.BigInteger,
-        sqlalchemy.ForeignKey("games.id"),
-        nullable=False,
-    ),
+    sqlalchemy.Column("game", game, nullable=False),
     sqlalchemy.Column(
         "status",
         sqlalchemy.Enum("in_progress", "finished", name="match_status"),

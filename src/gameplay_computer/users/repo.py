@@ -1,10 +1,11 @@
 import datetime
 import os
-from pydantic import BaseModel
 
 import httpx
+from pydantic import BaseModel
 
 from .schemas import User
+
 
 class ClerkEmailAddress(BaseModel):
     id: str
@@ -61,7 +62,8 @@ async def list_users(force: bool = False) -> list[User]:
             first_name=clerk_user.first_name,
             last_name=clerk_user.last_name,
             profile_image_url=clerk_user.profile_image_url,
-        ) for clerk_user in clerk_users
+        )
+        for clerk_user in clerk_users
     ]
 
 

@@ -1,7 +1,8 @@
 from typing import Literal
-from pydantic import BaseModel
+
 
 from gameplay_computer.common.schemas import BasePlayer
+
 
 class User(BasePlayer):
     kind: Literal["user"] = "user"

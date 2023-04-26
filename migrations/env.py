@@ -5,10 +5,10 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 import gameplay_computer.web
-from gameplay_computer.common.tables import agents, games
+from gameplay_computer.common.tables import agents, game
 from gameplay_computer.matches.tables import match_players, match_turns, matches
 
-tables = [games, agents, matches, match_players, match_turns]
+tables = [game, agents, matches, match_players, match_turns]
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
