@@ -14,12 +14,14 @@ from .tables import match_players, match_turns, matches
 async def create_match(database: Database, match: CreateMatch) -> int:
     async with database.transaction():
         # create the match
+        created_by_id = await ur.get_user_id_for_username(match.created_by.username)
+        assert created_by_id is not None
         match_id: int = await database.execute(
             query=matches.insert().values(
                 game_id=match.game.id,
                 status="in_progress",
                 winner=None,
-                created_by=match.created_by.id,
+                created_by=created_by_id,
                 created_at=sqlalchemy.func.now(),
                 finished_at=None,
             ),
@@ -29,11 +31,13 @@ async def create_match(database: Database, match: CreateMatch) -> int:
         for i, player in enumerate(match.players):
             match player:
                 case us.User() as user:
+                    user_id = await ur.get_user_id_for_username(user.username)
+                    assert user_id is not None
                     await database.execute(
                         query=match_players.insert().values(
                             match_id=match_id,
                             number=i + 1,
-                            user_id=user.id,
+                            user_id=user_id,
                             agent_id=None,
                         )
                     )

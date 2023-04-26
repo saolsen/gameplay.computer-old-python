@@ -1,12 +1,28 @@
 import datetime
 import os
+from pydantic import BaseModel
 
 import httpx
 
 from .schemas import User
 
+class ClerkEmailAddress(BaseModel):
+    id: str
+    email_address: str
+
+
+class ClerkUser(BaseModel):
+    id: str
+    username: str
+    first_name: str | None
+    last_name: str | None
+    profile_image_url: str | None
+    email_addresses: list[ClerkEmailAddress]
+    primary_email_address_id: str
+
+
 # suuuuuuuper shit cache, make better pls
-_users_cache: list[User] = []
+_users_cache: list[ClerkUser] = []
 _cache_updated: datetime.datetime | None = None
 
 
@@ -27,31 +43,63 @@ async def _update_cache(force: bool = False) -> None:
             req.raise_for_status()
             users = req.json()
             for user in users:
-                clerk_users.append(User(**user))
+                clerk_users.append(ClerkUser(**user))
         _users_cache = clerk_users
         _cache_updated = now
 
 
-async def list_users(force: bool = False) -> list[User]:
+async def _list_clerk_users(force: bool = False) -> list[ClerkUser]:
     await _update_cache(force)
     return _users_cache
 
 
+async def list_users(force: bool = False) -> list[User]:
+    clerk_users = await _list_clerk_users(force)
+    return [
+        User(
+            username=clerk_user.username,
+            first_name=clerk_user.first_name,
+            last_name=clerk_user.last_name,
+            profile_image_url=clerk_user.profile_image_url,
+        ) for clerk_user in clerk_users
+    ]
+
+
 async def get_user_by_id(user_id: str, force: bool = False) -> User | None:
-    users = await list_users(force=force)
-    for user in users:
-        if user.id == user_id:
-            return user
+    clerk_users = await _list_clerk_users(force)
+    for clerk_user in clerk_users:
+        if clerk_user.id == user_id:
+            return User(
+                username=clerk_user.username,
+                first_name=clerk_user.first_name,
+                last_name=clerk_user.last_name,
+                profile_image_url=clerk_user.profile_image_url,
+            )
     if not force:
         return await get_user_by_id(user_id, force=True)
     return None
 
 
 async def get_user_by_username(username: str, force: bool = False) -> User | None:
-    users = await list_users(force=force)
-    for user in users:
-        if user.username == username:
-            return user
+    clerk_users = await _list_clerk_users(force)
+    for clerk_user in clerk_users:
+        if clerk_user.username == username:
+            return User(
+                username=clerk_user.username,
+                first_name=clerk_user.first_name,
+                last_name=clerk_user.last_name,
+                profile_image_url=clerk_user.profile_image_url,
+            )
     if not force:
         return await get_user_by_username(username, force=True)
+    return None
+
+
+async def get_user_id_for_username(username: str, force: bool = False) -> str | None:
+    clerk_users = await _list_clerk_users(force)
+    for clerk_user in clerk_users:
+        if clerk_user.username == username:
+            return clerk_user.id
+    if not force:
+        return await get_user_id_for_username(username, force=True)
     return None

@@ -60,10 +60,10 @@ async def create_match(
                     players.append(user)
                 case "agent":
                     username, agentname = name.split("/")
-                    user = await users_repo.get_user_by_username(username)
-                    assert user is not None
+                    user_id = await users_repo.get_user_id_for_username(username)
+                    assert user_id is not None
                     agent = await common_repo.get_agent_by_user_id_and_name(
-                        database, user.id, agentname
+                        database, user_id, agentname
                     )
                     assert agent is not None
                     players.append(agent)

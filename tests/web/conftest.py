@@ -8,7 +8,7 @@ import pytest
 # from pytest_mock import mocker
 from httpx import AsyncClient
 
-from gameplay_computer.users.schemas import EmailAddress, User
+from gameplay_computer.users.repo import ClerkEmailAddress, ClerkUser
 from gameplay_computer.web.app import Auth, Listener, build_app
 
 
@@ -22,16 +22,16 @@ def mock_users() -> Iterator[None]:
     """
     Mocks the users repo so we don't call the Clerk API during tests.
     """
-    with mock.patch("gameplay_computer.users.repo.list_users") as mock_list_users:
-        mock_list_users.return_value = [
-            User(
+    with mock.patch("gameplay_computer.users.repo._list_clerk_users") as mock_list_clerk_users:
+        mock_list_clerk_users.return_value = [
+            ClerkUser(
                 id="u_steve",
                 username="steve",
                 first_name="Steve",
                 last_name="Olsen",
                 profile_image_url="https://example.com/steve.jpg",
                 email_addresses=[
-                    EmailAddress(id="email_1", email_address="steve@steve.computer")
+                    ClerkEmailAddress(id="email_1", email_address="steve@steve.computer")
                 ],
                 primary_email_address_id="email_1",
             )
