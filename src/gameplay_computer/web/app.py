@@ -54,8 +54,8 @@ async def run_ai_turns(database: databases.Database, match_id: int) -> None:
 
             if (
                 match is not None
-                and match.next_player is not None
-                and isinstance(match.players[match.next_player], cs.Agent)
+                and match.state.next_player is not None
+                and isinstance(match.players[match.state.next_player], cs.Agent)
             ):
                 await service.take_ai_turn(database, match_id)
             else:
@@ -316,6 +316,7 @@ def build_app(
                 "request": request,
                 "clerk_publishable_key": clerk_publishable_key,
                 "match": match,
+                "match_id": match_id,
                 "username": username,
             },
             block_name=block_name,
@@ -343,6 +344,7 @@ def build_app(
                 "request": request,
                 "clerk_publishable_key": clerk_publishable_key,
                 "match": match,
+                "match_id": match_id,
                 "username": username,
             },
             block_name=block_name,
@@ -373,6 +375,7 @@ def build_app(
                 "request": request,
                 "clerk_publishable_key": clerk_publishable_key,
                 "match": match,
+                "match_id": match_id,
                 "username": username,
             },
             block_name=block_name,

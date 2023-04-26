@@ -3,7 +3,9 @@ from typing import assert_never
 
 from databases import Database
 
-from .. import connect4
+from gameplay_computer.games.connect4 import Action as Connect4Action
+from gameplay_computer.games.connect4 import State as Connect4State
+
 from ..common import repo as common_repo
 from ..common import schemas as common_schemas
 from ..matches import repo as matches_repo
@@ -84,14 +86,14 @@ async def create_match(
             assert False, "You have to be one of the players."
 
         assert new_match.game == "connect4"
-        connect4.State()
+        state = Connect4State()
 
         match_id = await matches_repo.create_match(
             database,
             matches_schemas.CreateMatch(
-                game=new_match.game,
                 created_by=created_user,
                 players=players,
+                state=state,
             ),
         )
 
@@ -112,8 +114,8 @@ async def take_ai_turn(
     async with database.transaction():
         match = await get_match(database, match_id)
         assert match is not None
-        assert match.next_player is not None
-        agent = match.players[match.next_player]
+        assert match.state.next_player is not None
+        agent = match.players[match.state.next_player]
         assert isinstance(agent, common_schemas.Agent)
 
         assert agent.agentname == "random"
@@ -124,17 +126,15 @@ async def take_ai_turn(
         )
         assert agent_id is not None
 
-        # Assuming connect4 and random_agent
-        state = connect4.State(
-            board=match.state, next_player=connect4.Player(match.next_player)
-        )
-        actions = state.actions()
+        actions = match.state.actions()
+        action = random.choice(actions)
 
-        column = random.choice(actions)
+        assert isinstance(action, Connect4Action)
+
         await take_turn(
             database,
             match_id,
-            TurnCreate(column=column, player=match.next_player),
+            TurnCreate(column=action.column, player=match.state.next_player),
             agent_id=agent_id,
         )
 
@@ -154,10 +154,10 @@ async def take_turn(
         match = await get_match(database, match_id)
         assert match is not None
 
-        assert match.next_player is not None
-        assert match.next_player == new_turn.player
-        assert match.next_player in match.players
-        next_player = match.players[match.next_player]
+        assert match.state.next_player is not None
+        assert match.state.next_player == new_turn.player
+        assert match.state.next_player in match.players
+        next_player = match.players[match.state.next_player]
         assert next_player is not None
         if user_id is not None:
             clerk_user = await users_repo.get_user_by_id(user_id)
@@ -168,36 +168,28 @@ async def take_turn(
             # todo
             pass
 
-        # Assuming connect4
-        state = connect4.State(
-            board=match.state, next_player=connect4.Player(match.next_player)
-        )
-        assert new_turn.column in state.actions()
+        action: matches_schemas.Action
+        next_state: matches_schemas.State
+        match match.state.game:
+            case "connect4":
+                assert isinstance(match.state, Connect4State)
+                action = Connect4Action(column=new_turn.column)
+                assert action in match.state.actions()
 
-        result = state.turn(connect4.Player(new_turn.player), new_turn.column)
+                next_state = match.state.turn(new_turn.player, action)
 
-        winner = None
-        next_player_i = None
-
-        match result:
-            case connect4.Player():
-                winner = result.value
-            case "draw":
-                pass
-            case None:
-                next_player_i = state.next_player.value
-            case _result as unknown:
+            case _game as unknown:
                 assert_never(unknown)
 
         await matches_repo.create_match_turn(
             database,
-            match.id,
+            match_id,
             matches_schemas.CreateTurn(
                 player=new_turn.player,
-                action=new_turn.column,
-                state=state.board,
-                next_player=next_player_i,
-                winner=winner,
+                action=action.serialize(),
+                state=next_state.serialize(),
+                next_player=next_state.next_player,
+                winner=next_state.winner,
             ),
         )
 

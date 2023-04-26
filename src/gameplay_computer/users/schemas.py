@@ -1,6 +1,5 @@
 from typing import Literal
 
-
 from gameplay_computer.common.schemas import BasePlayer
 
 

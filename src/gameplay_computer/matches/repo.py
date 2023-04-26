@@ -3,11 +3,13 @@ import json
 import sqlalchemy
 from databases import Database
 
+from gameplay_computer.games.connect4 import State as Connect4State
+
 from ..common import repo as cr
 from ..common import schemas as cs
 from ..users import repo as ur
 from ..users import schemas as us
-from .schemas import CreateMatch, CreateTurn, Match, MatchSummary, Turn
+from .schemas import CreateMatch, CreateTurn, Match, MatchSummary, Player, Turn
 from .tables import match_players, match_turns, matches
 
 
@@ -18,9 +20,9 @@ async def create_match(database: Database, match: CreateMatch) -> int:
         assert created_by_id is not None
         match_id: int = await database.execute(
             query=matches.insert().values(
-                game=match.game,
+                game=match.state.game,
                 status="in_progress",
-                winner=None,
+                winner=match.state.winner,
                 created_by=created_by_id,
                 created_at=sqlalchemy.func.now(),
                 finished_at=None,
@@ -62,9 +64,8 @@ async def create_match(database: Database, match: CreateMatch) -> int:
                 number=0,
                 player=None,
                 action=None,
-                # todo: these last two are both connect4 specific
-                state=[[0] * 6 for _ in range(7)],
-                next_player=1,
+                state=match.state.serialize(),
+                next_player=match.state.next_player,
                 created_at=sqlalchemy.func.now(),
             )
         )
@@ -270,7 +271,7 @@ async def get_match_by_id(
 
     created_by = await ur.get_user_by_id(match_r["created_by"])
 
-    players: dict[int, us.User | cs.Agent] = {}
+    players: dict[int, Player] = {}
     for player_r in players_r:
         if player_r["user_id"] is not None:
             user = await ur.get_user_by_id(player_r["user_id"])
@@ -285,20 +286,27 @@ async def get_match_by_id(
 
     turns = [Turn.from_orm(turn_r) for turn_r in turns_r]
 
+    match match_r["game"]:
+        case "connect4":
+            state = Connect4State.deserialize(
+                False,
+                match_r["winner"],
+                latest_turn_r["next_player"],
+                latest_turn_r["state"],
+            )
+        case _game as game:
+            assert False, f"Unknown game: {game}"
+
     match = Match(
-        id=match_r["id"],
-        game="connect4",  # todo
         status=match_r["status"],
-        winner=match_r["winner"],
         created_by=created_by,
         created_at=match_r["created_at"],
         finished_at=match_r["finished_at"],
         players=players,
         turns=turns,
         turn=turn,
-        next_player=latest_turn_r["next_player"],
-        state=latest_turn_r["state"],
         updated_at=latest_turn_r["created_at"],
+        state=state,
     )
 
     return match

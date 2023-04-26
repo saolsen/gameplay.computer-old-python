@@ -1,9 +1,6 @@
 from databases import Database
 
-from gameplay_computer.users.repo import (
-    get_user_by_id,
-    get_user_id_for_username,
-)
+from gameplay_computer.users.repo import get_user_by_id, get_user_id_for_username
 
 from .schemas import Agent
 from .tables import agents

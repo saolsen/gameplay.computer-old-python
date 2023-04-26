@@ -4,16 +4,22 @@ from typing import Annotated, Any, Literal, Union
 # from fastapi import Form
 from pydantic import BaseModel, Field
 
+from gameplay_computer.games.connect4 import Action as Connect4Action
+from gameplay_computer.games.connect4 import State as Connect4State
+
 from ..common.schemas import Agent, Game
 from ..users.schemas import User
 
 Player = Annotated[Union[User, Agent], Field(discrminator="kind")]
 
+Action = Annotated[Union[Connect4Action], Field(discrminator="game")]
+State = Annotated[Union[Connect4State], Field(discrminator="game")]
+
 
 class CreateMatch(BaseModel):
-    game: Game
     created_by: User
     players: list[Player]
+    state: State
 
 
 class CreateTurn(BaseModel):
@@ -36,21 +42,17 @@ class Turn(BaseModel):
 
 
 class Match(BaseModel):
-    id: int
-    game: Game
     status: Literal["in_progress", "finished"]
-    winner: int | None
     created_by: User
     created_at: datetime
     finished_at: datetime | None
-    # Summaries of related data
-    players: dict[int, User | Agent]
+
+    players: dict[int, Player]
     turns: list[Turn]
-    # Data from a specific turn, usually the latest one.
+
     turn: int
-    next_player: int | None
-    state: Any
     updated_at: datetime
+    state: State
 
 
 class MatchSummary(BaseModel):
