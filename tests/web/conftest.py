@@ -5,7 +5,7 @@ import databases
 import pytest
 from httpx import AsyncClient
 
-from gameplay.web.app import Listener, build_app
+from gameplay_computer.web.app import Listener, build_app
 
 
 @pytest.fixture

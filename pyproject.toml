@@ -1,5 +1,5 @@
 [project]
-name = "gameplay"
+name = "gameplay_computer"
 authors = [
     { name = "Steve Olsen", email = "steve@steve.computer" },
 ]
@@ -36,13 +36,13 @@ requires = ["maturin>=0.14,<0.15"]
 build-backend = "maturin"
 
 [tool.maturin]
-module-name = "gameplay._gameplay"
+module-name = "gameplay_computer._gameplay"
 features = ["pyo3/extension-module"]
 manifest-path = "crates/gameplay/Cargo.toml"
 python-source = "src"
 include = [
-    "src/gameplay/web/static",
-    "src/gameplay/web/templates"
+    "src/gameplay_computer/web/static",
+    "src/gameplay_computer/web/templates"
 ]
 
 [tool.mypy]
