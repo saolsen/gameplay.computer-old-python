@@ -11,3 +11,6 @@ async def test_api(anyio_backend: str, api: AsyncClient) -> None:
     response = await api.get("/")
     assert 200 == response.status_code
     assert response.headers["content-type"] == "text/html; charset=utf-8"
+
+    response = await api.get("/", headers={"Authorization": "u_steve"})
+    assert 200 == response.status_code

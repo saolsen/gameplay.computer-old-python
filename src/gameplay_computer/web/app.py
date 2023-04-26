@@ -20,6 +20,33 @@ from ..common import schemas as cs
 from . import schemas, service
 
 
+class Auth:
+    def __init__(self, key: jwk.JWK | None):
+        self.key = key
+
+    def __call__(self, request: Request) -> str | None:
+        if self.key:
+            session = request.cookies.get("__session")
+            user_id = None
+            if session:
+                try:
+                    token = jwt.JWT(key=self.key, jwt=session, expected_type="JWS")
+                    token.validate(key=self.key)
+                    claims = json.loads(token.claims)
+                    user_id = claims["sub"]
+                except Exception as e:
+                    print(e)
+                    # todo: redirect/refresh somehow when the token
+                    # is expired so we can get a new one and still show the requested
+                    # page instead of loading a not logged in page.
+                    # prolly 2 handlers one that redirects and one that doesn't
+                    pass
+            return user_id
+        else:
+            # Test mode, make this a real token when you expose an api!
+            return request.headers.get("Authorization")
+
+
 async def run_ai_turns(database: databases.Database, match_id: int) -> None:
     while True:
         async with database.transaction():
@@ -87,33 +114,12 @@ class Listener:
         return listener
 
 
-def build_app(database: databases.Database, listener: Listener) -> FastAPI:
-    clerk_publishable_key = os.environ.get("CLERK_PUBLISHABLE_KEY")
-    assert clerk_publishable_key is not None
-
-    clerk_jwt_public_key = os.environ.get("CLERK_JWT_PUBLIC_KEY")
-    assert clerk_jwt_public_key is not None
-    pem = bytes(clerk_jwt_public_key, "utf-8")
-    key = jwk.JWK.from_pem(data=pem)
-
-    def get_user(request: Request) -> str | None:
-        session = request.cookies.get("__session")
-        user_id = None
-        if session:
-            try:
-                token = jwt.JWT(key=key, jwt=session, expected_type="JWS")
-                token.validate(key=key)
-                claims = json.loads(token.claims)
-                user_id = claims["sub"]
-            except Exception as e:
-                print(e)
-                # todo: redirect/refresh somehow when the token
-                # is expired so we can get a new one and still show the requested
-                # page instead of loading a not logged in page.
-                # prolly 2 handlers one that redirects and one that doesn't
-                pass
-        return user_id
-
+def build_app(
+    database: databases.Database,
+    listener: Listener,
+    auth: Auth,
+    clerk_publishable_key: str | None = None,
+) -> FastAPI:
     app = FastAPI()
 
     @app.on_event("startup")
@@ -155,7 +161,8 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
 
     @app.get("/selects", response_class=HTMLResponse)
     async def get_selects(
-        request: Request, user_id: str | None = Depends(get_user)
+        request: Request,
+        user_id: str | None = Depends(auth),
     ) -> Any:
         assert user_id is not None
         user = await service.get_clerk_user_by_id(user_id)
@@ -207,9 +214,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
                 return None
 
     @app.get("/", response_class=HTMLResponse)
-    async def get_root(
-        request: Request, user_id: str | None = Depends(get_user)
-    ) -> Any:
+    async def get_root(request: Request, user_id: str | None = Depends(auth)) -> Any:
         block_name = request.headers.get("hx-target")
 
         if user_id is not None:
@@ -243,9 +248,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
             )
 
     @app.get("/games", response_class=HTMLResponse)
-    async def get_games(
-        request: Request, user_id: str | None = Depends(get_user)
-    ) -> Any:
+    async def get_games(request: Request, user_id: str | None = Depends(auth)) -> Any:
         block_name = request.headers.get("hx-target")
 
         return templates.TemplateResponse(
@@ -259,9 +262,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
         )
 
     @app.get("/users", response_class=HTMLResponse)
-    async def get_users(
-        request: Request, user_id: str | None = Depends(get_user)
-    ) -> Any:
+    async def get_users(request: Request, user_id: str | None = Depends(auth)) -> Any:
         block_name = request.headers.get("hx-target")
 
         return templates.TemplateResponse(
@@ -275,9 +276,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
         )
 
     @app.get("/agents", response_class=HTMLResponse)
-    async def get_agents(
-        request: Request, user_id: str | None = Depends(get_user)
-    ) -> Any:
+    async def get_agents(request: Request, user_id: str | None = Depends(auth)) -> Any:
         block_name = request.headers.get("hx-target")
 
         return templates.TemplateResponse(
@@ -295,7 +294,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
         background_tasks: BackgroundTasks,
         request: Request,
         response: Response,
-        user_id: str | None = Depends(get_user),
+        user_id: str | None = Depends(auth),
         new_match: schemas.MatchCreate = Depends(schemas.MatchCreate.as_form),
     ) -> Any:
         assert user_id is not None
@@ -328,7 +327,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
         request: Request,
         _response: Response,
         match_id: int,
-        user_id: str | None = Depends(get_user),
+        user_id: str | None = Depends(auth),
     ) -> Any:
         assert user_id is not None
         user = await service.get_clerk_user_by_id(user_id)
@@ -357,7 +356,7 @@ def build_app(database: databases.Database, listener: Listener) -> FastAPI:
         response: Response,
         match_id: int,
         turn: schemas.TurnCreate = Depends(schemas.TurnCreate.as_form),
-        user_id: str | None = Depends(get_user),
+        user_id: str | None = Depends(auth),
     ) -> Any:
         assert user_id is not None
         user = await service.get_clerk_user_by_id(user_id)
@@ -395,7 +394,6 @@ def app() -> FastAPI:
 
     sentry_dsn = os.environ.get("SENTRY_DSN")
     sentry_environment = os.environ.get("SENTRY_ENVIRONMENT")
-
     if sentry_dsn is not None and sentry_environment is not None:
         sentry_sdk.init(
             dsn=sentry_dsn,
@@ -408,6 +406,16 @@ def app() -> FastAPI:
 
     listener = Listener(database_url)
 
-    _app = build_app(database, listener)
+    clerk_publishable_key = os.environ.get("CLERK_PUBLISHABLE_KEY")
+    clerk_jwt_public_key = os.environ.get("CLERK_JWT_PUBLIC_KEY")
+    key = None
+    if clerk_jwt_public_key is not None:
+        pem = bytes(clerk_jwt_public_key, "utf-8")
+        key = jwk.JWK.from_pem(data=pem)
+    auth = Auth(key)
+
+    _app = build_app(
+        database, listener, auth, clerk_publishable_key=clerk_publishable_key
+    )
 
     return _app
