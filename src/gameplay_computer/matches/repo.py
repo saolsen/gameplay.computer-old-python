@@ -5,12 +5,12 @@ from databases import Database
 
 from gameplay_computer.games.connect4 import State as Connect4State
 
-from ..common import repo as cr
-from ..common import schemas as cs
-from ..users import repo as ur
-from ..users import schemas as us
-from .schemas import CreateMatch, CreateTurn, Match, MatchSummary, Player, Turn
-from .tables import match_players, match_turns, matches
+from gameplay_computer.common import repo as cr
+from gameplay_computer.common import schemas as cs
+from gameplay_computer.users import repo as ur
+from gameplay_computer.users import schemas as us
+from gameplay_computer.matches.schemas import CreateMatch, CreateTurn, Match, MatchSummary, Player, Turn
+from gameplay_computer.matches.tables import match_players, match_turns, matches
 
 
 async def create_match(database: Database, match: CreateMatch) -> int:

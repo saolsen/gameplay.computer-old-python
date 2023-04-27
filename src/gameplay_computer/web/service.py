@@ -6,13 +6,13 @@ from databases import Database
 from gameplay_computer.games.connect4 import Action as Connect4Action
 from gameplay_computer.games.connect4 import State as Connect4State
 
-from ..common import repo as common_repo
-from ..common import schemas as common_schemas
-from ..matches import repo as matches_repo
-from ..matches import schemas as matches_schemas
-from ..users import repo as users_repo
-from ..users import schemas as users_schemas
-from ..web.schemas import MatchCreate, TurnCreate
+from gameplay_computer.common import repo as common_repo
+from gameplay_computer.common import schemas as common_schemas
+from gameplay_computer.matches import repo as matches_repo
+from gameplay_computer.matches import schemas as matches_schemas
+from gameplay_computer.users import repo as users_repo
+from gameplay_computer.users import schemas as users_schemas
+from gameplay_computer.web.schemas import MatchCreate, TurnCreate
 
 # TODO: we don't wanna import any tables in service,
 # that's sorta how we know we're doing well.

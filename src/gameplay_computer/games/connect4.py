@@ -116,6 +116,7 @@ class State(BaseState[Action, Json[Board]]):
     def actions(self) -> list[Action]:
         return [Action(column=i) for i in range(7) if self.board[i][5] == 0]
 
+    # todo: just make this mutable, this is silly and doing a copy for no reason.
     def turn(self, player: int, action: Action) -> "State":
         assert self.next_player == Player(player)
         assert self.board[action.column][5] == 0

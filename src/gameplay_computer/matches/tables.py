@@ -1,6 +1,6 @@
 import sqlalchemy
 
-from ..common.tables import game, metadata
+from gameplay_computer.common.tables import game, metadata
 
 matches = sqlalchemy.Table(
     "matches",

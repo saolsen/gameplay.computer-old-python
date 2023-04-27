@@ -16,8 +16,8 @@ from jinja2_fragments.fastapi import Jinja2Blocks  # type: ignore
 from jwcrypto import jwk, jwt  # type: ignore
 from sse_starlette.sse import EventSourceResponse
 
-from ..common import schemas as cs
-from . import schemas, service
+from gameplay_computer.common import schemas as cs
+from gameplay_computer.web import schemas, service
 
 
 class Auth:
@@ -386,7 +386,65 @@ def build_app(
         fn = listener.listen(match_id)
         return EventSourceResponse(fn())
 
+    from gameplay_computer.matches.schemas import Match
+
+    @app.post("/api/v1/matches")
+    async def api_create_match(
+            background_tasks: BackgroundTasks,
+            request: Request,
+            response: Response,
+            new_match: schemas.MatchCreate,
+            user_id: str | None = Depends(auth),
+    ) -> Match | None:
+        assert user_id is not None
+        user = await service.get_clerk_user_by_id(user_id)
+        assert user is not None
+
+        match_id = await service.create_match(user_id, database, new_match)
+        match = await service.get_match(database, match_id)
+
+        background_tasks.add_task(run_ai_turns, database, match_id)
+
+        return match
+
+
+    @app.get("/api/v1/matches/{match_id}")
+    async def api_get_match(
+            request: Request,
+            _response: Response,
+            match_id: int,
+            user_id: str | None = Depends(auth),
+    ) -> Match | None:
+        assert user_id is not None
+        user = await service.get_clerk_user_by_id(user_id)
+        assert user is not None
+
+        match = await service.get_match(database, match_id)
+
+        return match
+
+    # returns the match
+    @app.post("/api/v1/matches/{match_id}/turns")
+    async def api_create_turn(
+            background_tasks: BackgroundTasks,
+            request: Request,
+            response: Response,
+            match_id: int,
+            turn: schemas.TurnCreate,
+            user_id: str | None = Depends(auth),
+    ) -> Match | None:
+        assert user_id is not None
+        user = await service.get_clerk_user_by_id(user_id)
+        assert user is not None
+
+        match = await service.take_turn(database, match_id, turn, user_id=user_id)
+        background_tasks.add_task(run_ai_turns, database, match_id)
+
+        return match
+
     return app
+
+
 
 
 def app() -> FastAPI:
