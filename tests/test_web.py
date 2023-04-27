@@ -7,10 +7,10 @@ async def test_database(anyio_backend: str, database: databases.Database) -> Non
     assert result == 1
 
 
-async def test_api(anyio_backend: str, api: AsyncClient) -> None:
+async def test_api(api: AsyncClient, user_steve: str) -> None:
     response = await api.get("/")
     assert 200 == response.status_code
     assert response.headers["content-type"] == "text/html; charset=utf-8"
 
-    response = await api.get("/", headers={"Authorization": "u_steve"})
+    response = await api.get("/", headers={"Authorization": user_steve})
     assert 200 == response.status_code

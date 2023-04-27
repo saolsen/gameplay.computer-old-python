@@ -1,11 +1,11 @@
 import os
-from typing import AsyncIterator, Iterator
+from typing import AsyncIterator, Iterator, Callable
 from unittest import mock
 
 import databases
 import pytest
 
-# from pytest_mock import mocker
+
 from httpx import AsyncClient
 
 from gameplay_computer.users.repo import ClerkEmailAddress, ClerkUser
@@ -18,29 +18,41 @@ def anyio_backend() -> str:
 
 
 @pytest.fixture(autouse=True)
-def mock_users() -> Iterator[None]:
+def mock_users() -> Iterator[list[ClerkUser]]:
     """
     Mocks the users repo so we don't call the Clerk API during tests.
     """
     with mock.patch(
         "gameplay_computer.users.repo._list_clerk_users"
     ) as mock_list_clerk_users:
-        mock_list_clerk_users.return_value = [
-            ClerkUser(
-                id="u_steve",
-                username="steve",
-                first_name="Steve",
-                last_name="Olsen",
-                profile_image_url="https://example.com/steve.jpg",
-                email_addresses=[
-                    ClerkEmailAddress(
-                        id="email_1", email_address="steve@steve.computer"
-                    )
-                ],
-                primary_email_address_id="email_1",
-            )
-        ]
-        yield
+        _mock_users: list[ClerkUser] = []
+        mock_list_clerk_users.return_value = _mock_users
+        yield _mock_users
+
+
+@pytest.fixture
+def mock_user(mock_users: list[ClerkUser]) -> Callable[[ClerkUser], str]:
+    def _mock_user(user: ClerkUser) -> str:
+        mock_users.append(user)
+        return user.id
+
+    return _mock_user
+
+
+@pytest.fixture
+def user_steve(mock_user: Callable[[ClerkUser], str]) -> str:
+    steve = ClerkUser(
+        id="u_steve",
+        username="steve",
+        first_name="Steve",
+        last_name="Olsen",
+        profile_image_url="https://example.com/steve.jpg",
+        email_addresses=[
+            ClerkEmailAddress(id="email_1", email_address="steve@steve.computer")
+        ],
+        primary_email_address_id="email_1",
+    )
+    return mock_user(steve)
 
 
 @pytest.fixture

@@ -13,12 +13,7 @@ classifiers = [
 
 dynamic = ["version"]
 
-dependencies = []
-
-[project.optional-dependencies]
-test = ["pytest"]
-lint = ["black[d]", "mypy", "ruff", "sqlalchemy-stubs"]
-web = [
+dependencies = [
     "fastapi[all]",
     "sse-starlette",
     "databases[asyncpg]",
@@ -27,8 +22,12 @@ web = [
     "sentry-sdk[fastapi]",
     "jinja2",
     "jinja2-fragments",
-    "jwcrypto",
+    "jwcrypto"
 ]
+
+[project.optional-dependencies]
+test = ["pytest"]
+lint = ["black[d]", "mypy", "ruff", "sqlalchemy-stubs"]
 migrate = ["alembic", "psycopg2"]
 
 [build-system]
