@@ -116,7 +116,6 @@ class State(BaseState[Action, Json[Board]]):
     def actions(self) -> list[Action]:
         return [Action(column=i) for i in range(7) if self.board[i][5] == 0]
 
-
     def turn(self, player: int, action: Action) -> None:
         assert self.next_player == Player(player)
         assert self.board[action.column][5] == 0

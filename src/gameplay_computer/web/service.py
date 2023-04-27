@@ -3,11 +3,10 @@ from typing import assert_never
 
 from databases import Database
 
-from gameplay_computer.games.connect4 import Action as Connect4Action
-from gameplay_computer.games.connect4 import State as Connect4State
-
 from gameplay_computer.common import repo as common_repo
 from gameplay_computer.common import schemas as common_schemas
+from gameplay_computer.games.connect4 import Action as Connect4Action
+from gameplay_computer.games.connect4 import State as Connect4State
 from gameplay_computer.matches import repo as matches_repo
 from gameplay_computer.matches import schemas as matches_schemas
 from gameplay_computer.users import repo as users_repo

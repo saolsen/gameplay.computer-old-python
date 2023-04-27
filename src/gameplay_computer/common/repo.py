@@ -1,9 +1,8 @@
 from databases import Database
 
-from gameplay_computer.users.repo import get_user_by_id, get_user_id_for_username
-
 from gameplay_computer.common.schemas import Agent
 from gameplay_computer.common.tables import agents
+from gameplay_computer.users.repo import get_user_by_id, get_user_id_for_username
 
 
 async def get_agent_by_id(database: Database, agent_id: int) -> Agent | None:

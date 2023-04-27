@@ -4,10 +4,9 @@ from typing import Annotated, Any, Literal, Union
 # from fastapi import Form
 from pydantic import BaseModel, Field
 
+from gameplay_computer.common.schemas import Agent, Game
 from gameplay_computer.games.connect4 import Action as Connect4Action
 from gameplay_computer.games.connect4 import State as Connect4State
-
-from gameplay_computer.common.schemas import Agent, Game
 from gameplay_computer.users.schemas import User
 
 Player = Annotated[Union[User, Agent], Field(discrminator="kind")]

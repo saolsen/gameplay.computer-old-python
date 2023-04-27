@@ -390,11 +390,11 @@ def build_app(
 
     @app.post("/api/v1/matches")
     async def api_create_match(
-            background_tasks: BackgroundTasks,
-            request: Request,
-            response: Response,
-            new_match: schemas.MatchCreate,
-            user_id: str | None = Depends(auth),
+        background_tasks: BackgroundTasks,
+        request: Request,
+        response: Response,
+        new_match: schemas.MatchCreate,
+        user_id: str | None = Depends(auth),
     ) -> Match | None:
         assert user_id is not None
         user = await service.get_clerk_user_by_id(user_id)
@@ -407,13 +407,12 @@ def build_app(
 
         return match
 
-
     @app.get("/api/v1/matches/{match_id}")
     async def api_get_match(
-            request: Request,
-            _response: Response,
-            match_id: int,
-            user_id: str | None = Depends(auth),
+        request: Request,
+        _response: Response,
+        match_id: int,
+        user_id: str | None = Depends(auth),
     ) -> Match | None:
         assert user_id is not None
         user = await service.get_clerk_user_by_id(user_id)
@@ -426,12 +425,12 @@ def build_app(
     # returns the match
     @app.post("/api/v1/matches/{match_id}/turns")
     async def api_create_turn(
-            background_tasks: BackgroundTasks,
-            request: Request,
-            response: Response,
-            match_id: int,
-            turn: schemas.TurnCreate,
-            user_id: str | None = Depends(auth),
+        background_tasks: BackgroundTasks,
+        request: Request,
+        response: Response,
+        match_id: int,
+        turn: schemas.TurnCreate,
+        user_id: str | None = Depends(auth),
     ) -> Match | None:
         assert user_id is not None
         user = await service.get_clerk_user_by_id(user_id)
@@ -443,8 +442,6 @@ def build_app(
         return match
 
     return app
-
-
 
 
 def app() -> FastAPI:
