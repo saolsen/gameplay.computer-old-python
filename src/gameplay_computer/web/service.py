@@ -169,14 +169,13 @@ async def take_turn(
             pass
 
         action: matches_schemas.Action
-        next_state: matches_schemas.State
         match match.state.game:
             case "connect4":
                 assert isinstance(match.state, Connect4State)
                 action = Connect4Action(column=new_turn.column)
                 assert action in match.state.actions()
 
-                next_state = match.state.turn(new_turn.player, action)
+                match.state.turn(new_turn.player, action)
 
             case _game as unknown:
                 assert_never(unknown)
@@ -187,9 +186,9 @@ async def take_turn(
             matches_schemas.CreateTurn(
                 player=new_turn.player,
                 action=action.serialize(),
-                state=next_state.serialize(),
-                next_player=next_state.next_player,
-                winner=next_state.winner,
+                state=match.state.serialize(),
+                next_player=match.state.next_player,
+                winner=match.state.winner,
             ),
         )
 

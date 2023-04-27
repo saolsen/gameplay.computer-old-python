@@ -31,9 +31,6 @@ class BaseState(BaseModel, abc.ABC, Generic[A, S]):
     winner: int | None
     next_player: int | None
 
-    class Config:
-        allow_mutation = False
-
     @classmethod
     @abc.abstractmethod
     def deserialize(
@@ -50,7 +47,7 @@ class BaseState(BaseModel, abc.ABC, Generic[A, S]):
         ...
 
     @abc.abstractmethod
-    def turn(self, player: int, action: T) -> Self:
+    def turn(self, player: int, action: T) -> None:
         ...
 
 

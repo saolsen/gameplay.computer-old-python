@@ -116,40 +116,32 @@ class State(BaseState[Action, Json[Board]]):
     def actions(self) -> list[Action]:
         return [Action(column=i) for i in range(7) if self.board[i][5] == 0]
 
-    # todo: just make this mutable, this is silly and doing a copy for no reason.
-    def turn(self, player: int, action: Action) -> "State":
+
+    def turn(self, player: int, action: Action) -> None:
         assert self.next_player == Player(player)
         assert self.board[action.column][5] == 0
 
-        next = self.board.copy()
-
         for i in range(6):
-            if next[action.column][i] == 0:
-                next[action.column][i] = player
+            if self.board[action.column][i] == 0:
+                self.board[action.column][i] = player
                 break
 
-        result = check(next)
+        result = check(self.board)
 
-        over: bool = False
-        winner: Player | None = None
-        next_player: Player | None = None
         match result:
             case (Player.BLUE | Player.RED) as player:
-                over = True
-                winner = player
+                self.over = True
+                self.winner = player
+                self.next_player = None
             case "draw":
-                over = True
-                winner = None
+                self.over = True
+                self.winner = None
+                self.next_player = None
             case None:
-                next_player = (
+                self.over = False
+                self.winner = None
+                self.next_player = (
                     Player.BLUE if self.next_player == Player.RED else Player.RED
                 )
             case _other as unknown:
                 assert_never(unknown)
-
-        return State(
-            over=over,
-            winner=winner,
-            next_player=next_player,
-            board=next,
-        )
