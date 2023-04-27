@@ -155,7 +155,7 @@ async def take_turn(
 
         assert match.state.next_player is not None
         assert match.state.next_player == new_turn.player
-        assert match.state.next_player in match.players
+        assert match.state.next_player < len(match.players)
         next_player = match.players[match.state.next_player]
         assert next_player is not None
         if user_id is not None:

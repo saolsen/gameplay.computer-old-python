@@ -44,7 +44,7 @@ async def create_match(database: Database, match: CreateMatch) -> int:
                     await database.execute(
                         query=match_players.insert().values(
                             match_id=match_id,
-                            number=i + 1,
+                            number=i,
                             user_id=user_id,
                             agent_id=None,
                         )
@@ -57,7 +57,7 @@ async def create_match(database: Database, match: CreateMatch) -> int:
                     await database.execute(
                         query=match_players.insert().values(
                             match_id=match_id,
-                            number=i + 1,
+                            number=i,
                             user_id=None,
                             agent_id=agent_id,
                         )
@@ -183,11 +183,11 @@ async def list_match_summaries_for_user(
             left join match_players next_mp
             on mt.next_player = next_mp.number and m.id = next_mp.match_id
             join match_players blue_mp
-            on blue_mp.number = 1 and m.id = blue_mp.match_id
+            on blue_mp.number = 0 and m.id = blue_mp.match_id
             left join agents blue_a
             on blue_mp.agent_id = blue_a.id
             join match_players red_mp
-            on red_mp.number = 2 and m.id = red_mp.match_id
+            on red_mp.number = 1 and m.id = red_mp.match_id
             left join agents red_a
             on red_mp.agent_id = red_a.id
             where m.id in (select * from my_matches)
@@ -264,6 +264,7 @@ async def get_match_by_id(
             ).where(match_turns.c.match_id == match_id)
         )
 
+        # todo: sort in sql
         turns_r.sort(key=lambda turn_r: int(turn_r["number"]))
 
         if turn is None:
@@ -275,18 +276,21 @@ async def get_match_by_id(
         latest_turn_r = await database.fetch_one(query=q)
         assert latest_turn_r is not None
 
+    # TODO: sort in sql
     created_by = await ur.get_user_by_id(match_r["created_by"])
 
-    players: dict[int, Player] = {}
+    players_r.sort(key=lambda p: int(p["number"]))
+
+    players: list[Player] = []
     for player_r in players_r:
         if player_r["user_id"] is not None:
             user = await ur.get_user_by_id(player_r["user_id"])
             assert user is not None
-            players[player_r["number"]] = user
+            players.append(user)
         elif player_r["agent_id"] is not None:
             agent = await cr.get_agent_by_id(database, player_r["agent_id"])
             assert agent is not None
-            players[player_r["number"]] = agent
+            players.append(agent)
         else:
             assert False
 

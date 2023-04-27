@@ -9,15 +9,15 @@
             <hgroup>
                 <h2>Connect 4</h2>
                 {% if match.status == "finished" %}
-                    {% if match.state.winner == 1 %}
+                    {% if match.state.winner == 0 %}
                         <h4>Blue Wins!</h4>
-                    {% elif match.state.winner == 2 %}
+                    {% elif match.state.winner == 1 %}
                         <h4>Red Wins!</h4>
                     {% else %}
                         <h4>It's a tie!</h4>
                     {% endif %}
                 {% else %}
-                    {% if match.state.next_player == 1%}
+                    {% if match.state.next_player == 0 %}
                         {% if match.players[match.state.next_player].username == username %}
                             <h4>Blue's turn</h4>
                             <span>That's you!</span>
@@ -71,9 +71,9 @@
                 {% for col in range(0,7) %}
                     <svg x="{{100 * col}}" y="100">
                         {% for row in range(0,6) %}
-                            {% if match.state.board[col][row] == 1 %}
+                            {% if match.state.board[col][row] == "B" %}
                                 <circle cx="50" cy="{{ 550 - row * 100 }}" r="45" fill="#254689"></circle>
-                            {% elif match.state.board[col][row] == 2 %}
+                            {% elif match.state.board[col][row] == "R" %}
                                 <circle cx="50" cy="{{550-row*100}}" r="45" fill="#FC7E69"></circle>
                             {% endif %}
                         {% endfor %}
@@ -89,9 +89,9 @@
                     <ul>
                         {% for turn in match.turns %}
                             {% if turn.player is none %}
-                            {% elif turn.player == 1 %}
+                            {% elif turn.player == 0 %}
                                 <li>Blue: {{turn.action}}</li>
-                            {% elif turn.player == 2 %}
+                            {% elif turn.player == 1 %}
                                 <li>Red: {{turn.action}}</li>
                             {% endif %}
                         {% endfor %}

@@ -15,6 +15,9 @@ Action = Annotated[Union[Connect4Action], Field(discrminator="game")]
 State = Annotated[Union[Connect4State], Field(discrminator="game")]
 
 
+class BaseMatch(BaseModel):
+    pass
+
 class CreateMatch(BaseModel):
     created_by: User
     players: list[Player]
@@ -46,7 +49,7 @@ class Match(BaseModel):
     created_at: datetime
     finished_at: datetime | None
 
-    players: dict[int, Player]
+    players: list[Player]
     turns: list[Turn]
 
     turn: int

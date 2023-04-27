@@ -40,9 +40,9 @@ match_players = sqlalchemy.Table(
     sqlalchemy.CheckConstraint(
         """
         (user_id IS NOT NULL and agent_id IS NULL)
-        OR (user_id IS NULL and agent_id IS NOT NULL)"""
+        OR 
+        (user_id IS NULL and agent_id IS NOT NULL)"""
     ),
-    sqlalchemy.CheckConstraint("number > 0"),
 )
 
 
