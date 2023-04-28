@@ -305,8 +305,7 @@ def build_app(
 
         match_id = await service.create_match(user_id, database, new_match)
 
-        await run_ai_turns(database, match_id)
-        # background_tasks.add_task(run_ai_turns, database, match_id)
+        background_tasks.add_task(run_ai_turns, database, match_id)
 
         match = await service.get_match(database, match_id)
 
@@ -369,10 +368,8 @@ def build_app(
         block_name = request.headers.get("hx-target")
 
         match = await service.take_turn(database, match_id, turn, user_id=user_id)
-        await run_ai_turns(database, match_id)
-        # background_tasks.add_task(run_ai_turns, database, match_id)
 
-        match = await service.get_match(database, match_id)
+        background_tasks.add_task(run_ai_turns, database, match_id)
 
         return templates.TemplateResponse(
             "connect4_match.html",
