@@ -44,7 +44,8 @@ async def create_match(
             ) == 0:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="You cannot create a match with users unless you are one of the players.",
+                    detail="You cannot create a match with users unless you are one"
+                    + "of the players.",
                 )
             state = Connect4State()
             match_id = await repo.create_match(

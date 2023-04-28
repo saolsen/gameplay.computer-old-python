@@ -3,7 +3,7 @@ import json
 import sqlalchemy
 from databases import Database
 
-from gameplay_computer import common, users, matches, agents
+from gameplay_computer import users, agents
 from gameplay_computer.users import User
 from gameplay_computer.agents import Agent
 from gameplay_computer.games.connect4 import Action as Connect4Action
@@ -109,8 +109,8 @@ async def create_match_turn(
     If there is no next player, the match is set to "finished".
     If there is a winner, it's added.
     If the next turn isn't turn then we don't create a turn and return False.
-    This keeps us from creating double turns without making us hold a transaction through
-    all the game logic.
+    This keeps us from creating double turns without making us hold a
+    transaction through all the game logic.
     """
     async with database.transaction():
         latest_turn = await database.fetch_val(
