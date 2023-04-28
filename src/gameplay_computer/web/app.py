@@ -16,8 +16,9 @@ from jinja2_fragments.fastapi import Jinja2Blocks  # type: ignore
 from jwcrypto import jwk, jwt  # type: ignore
 from sse_starlette.sse import EventSourceResponse
 
-from gameplay_computer.common import schemas as cs
-from gameplay_computer.web import schemas, service
+from gameplay_computer.agents import Agent
+from gameplay_computer.matches import Match
+from . import schemas, service
 
 
 class Auth:
@@ -48,18 +49,17 @@ class Auth:
 
 
 async def run_ai_turns(database: databases.Database, match_id: int) -> None:
+    match = await service.get_match(database, match_id)
     while True:
-        async with database.transaction():
-            match = await service.get_match(database, match_id)
-
-            if (
-                match is not None
-                and match.state.next_player is not None
-                and isinstance(match.players[match.state.next_player], cs.Agent)
-            ):
-                await service.take_ai_turn(database, match_id)
-            else:
-                break
+        if (
+            match is not None
+            and match.state.over is False
+            and match.state.next_player is not None
+            and isinstance(match.players[match.state.next_player], Agent)
+        ):
+            match = await service.take_ai_turn(database, match_id)
+        else:
+            break
 
 
 class Listener:
@@ -304,9 +304,11 @@ def build_app(
         block_name = request.headers.get("hx-target")
 
         match_id = await service.create_match(user_id, database, new_match)
-        match = await service.get_match(database, match_id)
 
-        background_tasks.add_task(run_ai_turns, database, match_id)
+        await run_ai_turns(database, match_id)
+        # background_tasks.add_task(run_ai_turns, database, match_id)
+
+        match = await service.get_match(database, match_id)
 
         response.headers["HX-PUSH-URL"] = f"/matches/{match_id}/"
 
@@ -367,7 +369,10 @@ def build_app(
         block_name = request.headers.get("hx-target")
 
         match = await service.take_turn(database, match_id, turn, user_id=user_id)
-        background_tasks.add_task(run_ai_turns, database, match_id)
+        await run_ai_turns(database, match_id)
+        # background_tasks.add_task(run_ai_turns, database, match_id)
+
+        match = await service.get_match(database, match_id)
 
         return templates.TemplateResponse(
             "connect4_match.html",
@@ -385,8 +390,6 @@ def build_app(
     async def watch_match_changes(request: Request, match_id: int) -> Any:
         fn = listener.listen(match_id)
         return EventSourceResponse(fn())
-
-    from gameplay_computer.matches.schemas import Match
 
     @app.post("/api/v1/matches")
     async def api_create_match(

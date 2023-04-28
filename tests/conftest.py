@@ -1,11 +1,9 @@
 import os
-from typing import AsyncIterator, Iterator, Callable
+from typing import AsyncIterator, Callable, Iterator
 from unittest import mock
 
 import databases
 import pytest
-
-
 from httpx import AsyncClient
 
 from gameplay_computer.users.repo import ClerkEmailAddress, ClerkUser

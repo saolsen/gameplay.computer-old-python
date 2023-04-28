@@ -4,7 +4,7 @@ import os
 import httpx
 from pydantic import BaseModel
 
-from gameplay_computer.users.schemas import User
+from .schemas import User
 
 
 class ClerkEmailAddress(BaseModel):

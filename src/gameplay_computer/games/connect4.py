@@ -3,17 +3,19 @@ from typing import Literal, Self, assert_never
 
 from pydantic import Json
 
-from gameplay_computer.common.schemas import BaseAction, BaseState
+from gameplay_computer.common import BaseAction, BaseState
 
 
 class Player(IntEnum):
     BLUE = 0
     RED = 1
 
+
 class Space(StrEnum):
     EMPTY = " "
     BLUE = "B"
     RED = "R"
+
 
 def get_player(space: Space) -> Player:
     match space:
@@ -25,6 +27,7 @@ def get_player(space: Space) -> Player:
             assert None
         case _space as unreachable:
             assert_never(unreachable)
+
 
 def get_space(player: Player) -> Space:
     match player:

@@ -53,10 +53,3 @@ class BaseState(BaseModel, abc.ABC, Generic[A, S]):
 
 class BasePlayer(BaseModel):
     kind: Literal["user", "agent"]
-
-
-class Agent(BasePlayer):
-    kind: Literal["agent"] = "agent"
-    game: Game
-    username: str
-    agentname: str

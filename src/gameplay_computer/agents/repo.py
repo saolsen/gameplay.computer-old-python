@@ -1,8 +1,9 @@
 from databases import Database
 
-from gameplay_computer.common.schemas import Agent
-from gameplay_computer.common.tables import agents
-from gameplay_computer.users.repo import get_user_by_id, get_user_id_for_username
+from .schemas import Agent
+from .tables import agents
+
+from gameplay_computer import users
 
 
 async def get_agent_by_id(database: Database, agent_id: int) -> Agent | None:
@@ -11,7 +12,7 @@ async def get_agent_by_id(database: Database, agent_id: int) -> Agent | None:
     )
     if agent is None:
         return None
-    user = await get_user_by_id(agent["user_id"])
+    user = await users.get_user_by_id(agent["user_id"])
     assert user is not None
     return Agent(
         game=agent["game"],
@@ -23,7 +24,7 @@ async def get_agent_by_id(database: Database, agent_id: int) -> Agent | None:
 async def get_agent_by_username_and_agentname(
     database: Database, username: str, agentname: str
 ) -> Agent | None:
-    user_id = await get_user_id_for_username(username)
+    user_id = await users.get_user_id_for_username(username)
     assert user_id is not None
     agent = await database.fetch_one(
         query=agents.select().where(
@@ -42,7 +43,7 @@ async def get_agent_by_username_and_agentname(
 async def get_agent_id_for_username_and_agentname(
     database: Database, username: str, agentname: str
 ) -> int | None:
-    user_id = await get_user_id_for_username(username)
+    user_id = await users.get_user_id_for_username(username)
     assert user_id is not None
     agent_id = await database.fetch_val(
         query=agents.select().where(
