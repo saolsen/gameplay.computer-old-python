@@ -87,9 +87,9 @@
                     <td>{{ match.game_name }}</td>
                     <td>
                         {% if match.status == "finished" %}
-                            {% if match.winner == 1 %}
+                            {% if match.winner == 0 %}
                             <span>Blue Won</span>
-                            {% elif match.winner == 2 %}
+                            {% elif match.winner == 1 %}
                             <span>Red Won</span>
                             {% else %}
                             <span>Draw</span>
@@ -100,9 +100,9 @@
                             {% else %}
                                 <span>Waiting on: </span>
                             {% endif %}
-                            {% if match.next_player == 1 %}
+                            {% if match.next_player == 0 %}
                                 <span>Blue</span>
-                            {% elif match.next_player == 2 %}
+                            {% elif match.next_player == 1 %}
                                 <span>Red</span>
                             {% endif %}
                         {% endif %}
