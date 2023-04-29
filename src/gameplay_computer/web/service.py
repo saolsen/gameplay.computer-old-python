@@ -1,6 +1,8 @@
 import random
 from typing import assert_never
 
+from fastapi import HTTPException, status
+
 from databases import Database
 
 from gameplay_computer import matches, users, agents
@@ -12,11 +14,23 @@ from .schemas import MatchCreate, TurnCreate
 
 
 # Stubs to keep web working.
-async def get_clerk_users() -> list[User]:
+async def get_users() -> list[User]:
     return await users.list_users()
 
 
-async def get_clerk_user_by_id(user_id: str) -> User | None:
+async def get_user(user_id: str | None) -> User:
+    if user_id is not None:
+        user = await users.get_user_by_id(user_id)
+        if user is not None:
+            return user
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Unknown user.",
+    )
+
+
+async def get_user_by_id(user_id: str) -> User | None:
     return await users.get_user_by_id(user_id)
 
 
@@ -87,6 +101,7 @@ async def take_ai_turn(
     )
     assert agent_id is not None
 
+    # This is the agent
     actions = match.state.actions()
     action = random.choice(actions)
 

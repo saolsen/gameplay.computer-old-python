@@ -9,7 +9,14 @@ from typing import Any, AsyncIterator, Callable
 import asyncpg_listen
 import databases
 import sentry_sdk
-from fastapi import BackgroundTasks, Depends, FastAPI, Request, Response
+from fastapi import (
+    BackgroundTasks,
+    Depends,
+    FastAPI,
+    Request,
+    Response,
+    HTTPException,
+)
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2_fragments.fastapi import Jinja2Blocks  # type: ignore
@@ -18,7 +25,27 @@ from sse_starlette.sse import EventSourceResponse
 
 from gameplay_computer.agents import Agent
 from gameplay_computer.matches import Match
+from gameplay_computer.users import User
 from . import schemas, service
+
+
+def session_auth(key: jwk.JWK, request: Request) -> str | None:
+    session = request.cookies.get("__session")
+    user_id = None
+    if session:
+        try:
+            token = jwt.JWT(key=key, jwt=session, expected_type="JWS")
+            token.validate(key=key)
+            claims = json.loads(token.claims)
+            user_id = claims["sub"]
+        except Exception as e:
+            print(e)
+            # todo: redirect/refresh somehow when the token
+            # is expired so we can get a new one and still show the requested
+            # page instead of loading a not logged in page.
+            # prolly 2 handlers one that redirects and one that doesn't
+            return None
+    return user_id
 
 
 class Auth:
@@ -27,22 +54,7 @@ class Auth:
 
     def __call__(self, request: Request) -> str | None:
         if self.key:
-            session = request.cookies.get("__session")
-            user_id = None
-            if session:
-                try:
-                    token = jwt.JWT(key=self.key, jwt=session, expected_type="JWS")
-                    token.validate(key=self.key)
-                    claims = json.loads(token.claims)
-                    user_id = claims["sub"]
-                except Exception as e:
-                    print(e)
-                    # todo: redirect/refresh somehow when the token
-                    # is expired so we can get a new one and still show the requested
-                    # page instead of loading a not logged in page.
-                    # prolly 2 handlers one that redirects and one that doesn't
-                    pass
-            return user_id
+            return session_auth(self.key, request)
         else:
             # Test mode, make this a real token when you expose an api!
             return request.headers.get("Authorization")
@@ -164,9 +176,7 @@ def build_app(
         request: Request,
         user_id: str | None = Depends(auth),
     ) -> Any:
-        assert user_id is not None
-        user = await service.get_clerk_user_by_id(user_id)
-        assert user is not None
+        user = await service.get_user(user_id)
         username = user.username
 
         if "player_type_1" in request.query_params:
@@ -186,7 +196,7 @@ def build_app(
                     f'<input name="player_name_{n}" type="hidden" value="{username}">'
                 )
             case "user":
-                users = await service.get_clerk_users()
+                users = await service.get_users()
                 options = [
                     f'<option value="{user.username}">{user.username}</option>'
                     for user in users
@@ -217,12 +227,15 @@ def build_app(
     async def get_root(request: Request, user_id: str | None = Depends(auth)) -> Any:
         block_name = request.headers.get("hx-target")
 
-        if user_id is not None:
-            assert user_id is not None
-            user = await service.get_clerk_user_by_id(user_id)
-            assert user is not None
-            username = user.username
+        user: User | None = None
+        try:
+            user = await service.get_user(user_id)
+        except HTTPException:
+            pass
 
+        if user is not None:
+            assert user_id is not None
+            username = user.username
             matches = await service.get_matches(database, user_id)
 
             return templates.TemplateResponse(
@@ -297,9 +310,8 @@ def build_app(
         user_id: str | None = Depends(auth),
         new_match: schemas.MatchCreate = Depends(schemas.MatchCreate.as_form),
     ) -> Any:
+        user = await service.get_user(user_id)
         assert user_id is not None
-        user = await service.get_clerk_user_by_id(user_id)
-        assert user is not None
         username = user.username
         block_name = request.headers.get("hx-target")
 
@@ -331,9 +343,8 @@ def build_app(
         match_id: int,
         user_id: str | None = Depends(auth),
     ) -> Any:
+        user = await service.get_user(user_id)
         assert user_id is not None
-        user = await service.get_clerk_user_by_id(user_id)
-        assert user is not None
         username = user.username
         block_name = request.headers.get("hx-target")
 
@@ -361,9 +372,8 @@ def build_app(
         turn: schemas.TurnCreate = Depends(schemas.TurnCreate.as_form),
         user_id: str | None = Depends(auth),
     ) -> Any:
+        user = await service.get_user(user_id)
         assert user_id is not None
-        user = await service.get_clerk_user_by_id(user_id)
-        assert user is not None
         username = user.username
         block_name = request.headers.get("hx-target")
 
@@ -396,9 +406,8 @@ def build_app(
         new_match: schemas.MatchCreate,
         user_id: str | None = Depends(auth),
     ) -> Match | None:
+        await service.get_user(user_id)
         assert user_id is not None
-        user = await service.get_clerk_user_by_id(user_id)
-        assert user is not None
 
         match_id = await service.create_match(user_id, database, new_match)
         match = await service.get_match(database, match_id)
@@ -414,9 +423,8 @@ def build_app(
         match_id: int,
         user_id: str | None = Depends(auth),
     ) -> Match | None:
+        await service.get_user(user_id)
         assert user_id is not None
-        user = await service.get_clerk_user_by_id(user_id)
-        assert user is not None
 
         match = await service.get_match(database, match_id)
 
@@ -432,9 +440,8 @@ def build_app(
         turn: schemas.TurnCreate,
         user_id: str | None = Depends(auth),
     ) -> Match | None:
+        await service.get_user(user_id)
         assert user_id is not None
-        user = await service.get_clerk_user_by_id(user_id)
-        assert user is not None
 
         match = await service.take_turn(database, match_id, turn, user_id=user_id)
         background_tasks.add_task(run_ai_turns, database, match_id)

@@ -348,7 +348,7 @@ async def get_match_by_id(
             ]
 
             state = Connect4State.deserialize(
-                False,
+                latest_turn_r["next_player"] is None,
                 match_r["winner"],
                 latest_turn_r["next_player"],
                 latest_turn_r["state"],

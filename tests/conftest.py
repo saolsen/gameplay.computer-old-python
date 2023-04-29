@@ -54,6 +54,22 @@ def user_steve(mock_user: Callable[[ClerkUser], str]) -> str:
 
 
 @pytest.fixture
+def user_gabe(mock_user: Callable[[ClerkUser], str]) -> str:
+    gabe = ClerkUser(
+        id="u_gabe",
+        username="gabe",
+        first_name="Gabe",
+        last_name="",
+        profile_image_url="https://example.com/gabe.jpg",
+        email_addresses=[
+            ClerkEmailAddress(id="email_1", email_address="gabe@gabe.computer")
+        ],
+        primary_email_address_id="email_1",
+    )
+    return mock_user(gabe)
+
+
+@pytest.fixture
 def database_url() -> str:
     test_database_url = os.environ.get("TEST_DATABASE_URL")
     assert test_database_url is not None
