@@ -18,27 +18,27 @@
                     {% endif %}
                 {% else %}
                     {% if match.state.next_player == 0 %}
-                        {% if match.players[match.state.next_player].username == username %}
+                        {% if match.players[match.state.next_player].kind == "user" and match.players[match.state.next_player].username == username %}
                             <h4>Blue's turn</h4>
                             <span>That's you!</span>
                         {% else %}
                             <h4>Waiting for Blue's Turn</h4>
-                            {% if match.players[match.state.next_player].username is not none %}
+                            {% if match.players[match.state.next_player].kind == "user" %}
                                 <span>user: {{ match.players[match.state.next_player].username }}</span>
                             {% else %}
-                                <span>agent: {{ match.players[match.state.next_player].agentname }}</span>
+                                <span>agent: {{ match.players[match.state.next_player].username}}/{{ match.players[match.state.next_player].agentname }}</span>
                             {% endif %}
                         {% endif %}
                     {% else %}
-                        {% if match.players[match.state.next_player].username == username %}
+                        {% if match.players[match.state.next_player].kind == "user" and match.players[match.state.next_player].username == username %}
                             <h4>Red's Turn</h4>
                             <span>That's you!</span>
                         {% else %}
                             <h4>Waiting for Red's Turn</h4>
-                            {% if match.players[match.state.next_player].username is not none %}
+                            {% if match.players[match.state.next_player].kind == "user" %}
                                 <span>user: {{ match.players[match.state.next_player].username }}</span>
                             {% else %}
-                                <span>agent: {{ match.players[match.state.next_player].agentname }}</span>
+                                <span>agent: {{ match.players[match.state.next_player].username}}/{{ match.players[match.state.next_player].agentname }}</span>
                             {% endif %}
                         {% endif %}
                     {% endif %}
@@ -56,7 +56,9 @@
                         <rect width="100" height="600" fill="url(#cell-pattern)"></rect>
                     </mask>
                 </defs>
-                {% if match.status != "finished" and match.players[match.state.next_player].username == username %}
+                {% if match.status != "finished"
+                      and match.players[match.state.next_player].kind == "user"
+                      and match.players[match.state.next_player].username == username %}
                 <svg x="0" y="0">
                     {% for i in range(0, 8) %}
                     <g>

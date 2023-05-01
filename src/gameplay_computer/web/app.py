@@ -5,6 +5,7 @@ from asyncio import Queue
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, AsyncIterator, Callable
+import httpx
 
 import asyncpg_listen
 import databases
@@ -61,17 +62,18 @@ class Auth:
 
 
 async def run_ai_turns(database: databases.Database, match_id: int) -> None:
-    match = await service.get_match(database, match_id)
-    while True:
-        if (
-            match is not None
-            and match.state.over is False
-            and match.state.next_player is not None
-            and isinstance(match.players[match.state.next_player], Agent)
-        ):
-            match = await service.take_ai_turn(database, match_id)
-        else:
-            break
+    async with httpx.AsyncClient() as client:
+        match = await service.get_match(database, match_id)
+        while True:
+            if (
+                match is not None
+                and match.state.over is False
+                and match.state.next_player is not None
+                and isinstance(match.players[match.state.next_player], Agent)
+            ):
+                match = await service.take_ai_turn(database, client, match_id)
+            else:
+                break
 
 
 class Listener:

@@ -3,7 +3,7 @@ from typing import assert_never
 from databases import Database
 from fastapi import HTTPException, status
 
-from gameplay_computer import users
+from gameplay_computer import users, agents
 from gameplay_computer.common import Game
 from gameplay_computer.games.connect4 import State as Connect4State
 
@@ -107,21 +107,42 @@ async def take_action(
         )
 
     next_player = match.players[match.state.next_player]
-    if acting_user_id is not None:
+    if next_player.kind == "user":
+        if acting_user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Unknown User",
+            )
         user = await users.get_user_by_id(acting_user_id)
         if user is None:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Unknown User",
             )
-        if user.username != next_player.username:
+        if next_player.username != user.username:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="It is not your turn.",
+            )
+    elif next_player.kind == "agent":
+        if acting_agent_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Unknown Agent",
+            )
+        agent = await agents.get_agent_by_id(database, acting_agent_id)
+        if agent is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Unknown Agent",
+            )
+        if next_player.username != agent.username or next_player.agentname != agent.agentname:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="It is not your turn.",
             )
     else:
-        # todo: verify agents
-        pass
+        assert_never(next_player.kind)
 
     if action.game != match.state.game:
         raise HTTPException(

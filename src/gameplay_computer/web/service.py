@@ -1,4 +1,5 @@
 import random
+import asyncio
 from typing import assert_never
 
 from fastapi import HTTPException, status
@@ -10,8 +11,8 @@ from gameplay_computer.agents import Agent
 from gameplay_computer.users import User
 
 from gameplay_computer.games.connect4 import Action as Connect4Action
-from .schemas import MatchCreate, TurnCreate
-
+from .schemas import MatchCreate, TurnCreate, PostTurn, PostMatch, PostPlayer
+import httpx
 
 # Stubs to keep web working.
 async def get_users() -> list[User]:
@@ -85,6 +86,7 @@ async def get_match(
 
 async def take_ai_turn(
     database: Database,
+    client: httpx.AsyncClient,
     match_id: int,
 ) -> matches.Match:
     match = await get_match(database, match_id)
@@ -100,12 +102,37 @@ async def take_ai_turn(
         database, agent.username, agent.agentname
     )
     assert agent_id is not None
+    agent_deployment = await agents.get_agent_deployment_by_id(
+        database, agent_id
+    )
+    agent_url = agent_deployment.url
 
-    # This is the agent
-    actions = match.state.actions()
-    action = random.choice(actions)
+    post_match = PostMatch.from_match(match, match_id)
 
-    assert isinstance(action, Connect4Action)
+    action: Connect4Action | None = None
+
+    # some sorta retry logic
+    retries = 0
+    while retries < 3:
+        try:
+            response = await client.post(agent_url, json=post_match.dict())
+            response.raise_for_status()
+            action = Connect4Action(**response.json())
+            assert isinstance(action, Connect4Action)
+            break
+        except httpx.HTTPError as e:
+            print(f"Error: {e}")
+            retries += 1
+            await asyncio.sleep(retries)
+
+    # todo: log error and somehow get errors to the user
+    # todo: some way to disqualify bad agents
+    if action is None:
+        print("ERROR: too many agent errors")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Too many agent errors.",
+        )
 
     next_match = await matches.take_action(
         database,

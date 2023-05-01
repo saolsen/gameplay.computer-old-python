@@ -20,8 +20,8 @@ matches = sqlalchemy.Table(
         sqlalchemy.String,
         nullable=False,
     ),
-    sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=False),
-    sqlalchemy.Column("finished_at", sqlalchemy.DateTime),
+    sqlalchemy.Column("created_at", sqlalchemy.DateTime(timezone=True), nullable=False),
+    sqlalchemy.Column("finished_at", sqlalchemy.DateTime(timezone=True)),
 )
 
 match_players = sqlalchemy.Table(
@@ -76,5 +76,5 @@ match_turns = sqlalchemy.Table(
         "next_player",
         sqlalchemy.Integer,
     ),
-    sqlalchemy.Column("created_at", sqlalchemy.DateTime, nullable=False),
+    sqlalchemy.Column("created_at", sqlalchemy.DateTime(timezone=True), nullable=False),
 )

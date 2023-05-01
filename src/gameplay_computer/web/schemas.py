@@ -3,6 +3,9 @@ from typing import Literal, Self
 from fastapi import Form
 from pydantic import BaseModel
 
+from gameplay_computer.common import Game
+from gameplay_computer.matches import Action, State, Match
+
 
 class MatchCreate(BaseModel):
     game: Literal["connect4"]
@@ -40,3 +43,51 @@ class TurnCreate(BaseModel):
     @classmethod
     def as_form(cls, player: int = Form(...), column: int = Form(...)) -> Self:
         return cls(player=player, column=column)
+
+# Schemas for what we post to the agents.
+# These will probably go in an external library.
+class PostPlayer(BaseModel):
+    kind: Literal["user", "agent"]
+    username: str
+    agentname: str | None
+
+class PostTurn(BaseModel):
+    number: int
+    player: int | None
+    action: Action | None
+    next_player: int | None
+
+class PostMatch(BaseModel):
+    id: int
+    game: Game
+    players: list[PostPlayer]
+    turns: list[PostTurn]
+    state: State
+
+    @classmethod
+    def from_match(cls, match: Match, match_id: int) -> Self:
+        post_game = match.state.game
+        post_players = [
+            PostPlayer(
+                kind=player.kind,
+                username=player.username,
+                agentname=player.agentname if player.kind == "agent" else None
+            )
+            for player in match.players
+        ]
+        post_turns = [
+            PostTurn(
+                number=turn.number,
+                player=turn.player,
+                action=turn.action,
+                next_player=turn.next_player,
+            ) for turn in match.turns
+        ]
+        post_match = cls(
+            id=match_id,
+            game=post_game,
+            players=post_players,
+            turns=post_turns,
+            state=match.state,
+        )
+        return post_match

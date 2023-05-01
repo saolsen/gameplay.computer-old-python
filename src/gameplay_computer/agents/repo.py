@@ -1,6 +1,6 @@
 from databases import Database
 
-from .schemas import Agent
+from .schemas import Agent, AgentDeployment
 from .tables import agents
 
 from gameplay_computer import users
@@ -54,3 +54,11 @@ async def get_agent_id_for_username_and_agentname(
     if agent_id is None:
         return None
     return int(agent_id)
+
+async def get_agent_deployment_by_id(
+    database: Database, agent_id: int
+) -> AgentDeployment:
+    return AgentDeployment(
+        url="https://gameplay-agents.fly.dev/connect4_random",
+        active=True,
+    )
