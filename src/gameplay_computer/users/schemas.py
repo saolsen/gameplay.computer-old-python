@@ -1,11 +1,9 @@
 from typing import Literal
 
-from gameplay_computer.common import BasePlayer
+from gameplay_computer.gameplay import User
 
 
-class User(BasePlayer):
-    kind: Literal["user"] = "user"
-    username: str
+class FullUser(User):
     first_name: str | None
     last_name: str | None
     profile_image_url: str | None

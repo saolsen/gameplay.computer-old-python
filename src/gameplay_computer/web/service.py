@@ -1,4 +1,3 @@
-import random
 import asyncio
 from typing import assert_never
 
@@ -6,13 +5,13 @@ from fastapi import HTTPException, status
 
 from databases import Database
 
+from gameplay_computer.gameplay import Agent, User, Match, Connect4State, Connect4Action
+from gameplay_computer import gameplay
 from gameplay_computer import matches, users, agents
-from gameplay_computer.agents import Agent
-from gameplay_computer.users import User
 
-from gameplay_computer.games.connect4 import Action as Connect4Action
-from .schemas import MatchCreate, TurnCreate, PostTurn, PostMatch, PostPlayer
+from .schemas import MatchCreate, TurnCreate
 import httpx
+
 
 # Stubs to keep web working.
 async def get_users() -> list[User]:
@@ -79,7 +78,7 @@ async def create_match(
 
 async def get_match(
     database: Database, match_id: int, turn: int | None = None
-) -> matches.Match:
+) -> Match:
     match = await matches.get_match_by_id(database, match_id, turn=turn)
     return match
 
@@ -88,7 +87,7 @@ async def take_ai_turn(
     database: Database,
     client: httpx.AsyncClient,
     match_id: int,
-) -> matches.Match:
+) -> Match:
     match = await get_match(database, match_id)
 
     assert match.state.next_player is not None
@@ -102,37 +101,55 @@ async def take_ai_turn(
         database, agent.username, agent.agentname
     )
     assert agent_id is not None
-    agent_deployment = await agents.get_agent_deployment_by_id(
-        database, agent_id
+
+    post_state = gameplay.Connect4State(
+        over=False,
+        winner=None,
+        next_player=match.state.next_player,
+        board=match.state.board,
     )
-    agent_url = agent_deployment.url
 
-    post_match = PostMatch.from_match(match, match_id)
+    post_players: list[gameplay.Player] = []
 
-    action: Connect4Action | None = None
+    for player in match.players:
+        if player.kind == "user":
+            post_players.append(
+                gameplay.User(
+                    username=player.username,
+                )
+            )
+        elif player.kind == "agent":
+            post_players.append(
+                gameplay.Agent(
+                    game="connect4",
+                    username=player.username,
+                    agentname=player.agentname,
+                )
+            )
 
-    # some sorta retry logic
-    retries = 0
-    while retries < 3:
-        try:
-            response = await client.post(agent_url, json=post_match.dict())
-            response.raise_for_status()
-            action = Connect4Action(**response.json())
-            assert isinstance(action, Connect4Action)
-            break
-        except httpx.HTTPError as e:
-            print(f"Error: {e}")
-            retries += 1
-            await asyncio.sleep(retries)
+    post_turns = []
 
-    # todo: log error and somehow get errors to the user
-    # todo: some way to disqualify bad agents
-    if action is None:
-        print("ERROR: too many agent errors")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Too many agent errors.",
+    for turn in match.turns:
+        post_turns.append(
+            gameplay.Turn(
+                number=turn.number,
+                player=turn.player,
+                action=turn.action,
+                next_player=turn.next_player,
+            )
         )
+
+    gp_match = gameplay.Match(
+        id=match.id,
+        game=match.game,
+        players=post_players,
+        turns=post_turns,
+        turn=match.turn,
+        state=post_state,
+    )
+
+    gp_action = await agents.get_agent_action(database, client, agent_id, gp_match)
+    action = Connect4Action(column=gp_action.column)
 
     next_match = await matches.take_action(
         database,
@@ -150,7 +167,7 @@ async def take_turn(
     new_turn: TurnCreate,
     user_id: str | None = None,
     agent_id: int | None = None,
-) -> matches.Match:
+) -> Match:
     return await matches.take_action(
         database,
         match_id,

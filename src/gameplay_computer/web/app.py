@@ -24,10 +24,10 @@ from jinja2_fragments.fastapi import Jinja2Blocks  # type: ignore
 from jwcrypto import jwk, jwt  # type: ignore
 from sse_starlette.sse import EventSourceResponse
 
-from gameplay_computer.agents import Agent
-from gameplay_computer.matches import Match
-from gameplay_computer.users import User
 from . import schemas, service
+
+from gameplay_computer import users
+from gameplay_computer.gameplay import User, Agent, Player, Action, State, Turn, Match
 
 
 def session_auth(key: jwk.JWK, request: Request) -> str | None:
@@ -320,6 +320,7 @@ def build_app(
         match_id = await service.create_match(user_id, database, new_match)
 
         background_tasks.add_task(run_ai_turns, database, match_id)
+        # await run_ai_turns(database, match_id)
 
         match = await service.get_match(database, match_id)
 
@@ -382,6 +383,7 @@ def build_app(
         match = await service.take_turn(database, match_id, turn, user_id=user_id)
 
         background_tasks.add_task(run_ai_turns, database, match_id)
+        # await run_ai_turns(database, match_id)
 
         return templates.TemplateResponse(
             "connect4_match.html",
@@ -400,55 +402,56 @@ def build_app(
         fn = listener.listen(match_id)
         return EventSourceResponse(fn())
 
-    @app.post("/api/v1/matches")
-    async def api_create_match(
-        background_tasks: BackgroundTasks,
-        request: Request,
-        response: Response,
-        new_match: schemas.MatchCreate,
-        user_id: str | None = Depends(auth),
-    ) -> Match | None:
-        await service.get_user(user_id)
-        assert user_id is not None
-
-        match_id = await service.create_match(user_id, database, new_match)
-        match = await service.get_match(database, match_id)
-
-        background_tasks.add_task(run_ai_turns, database, match_id)
-
-        return match
-
-    @app.get("/api/v1/matches/{match_id}")
-    async def api_get_match(
-        request: Request,
-        _response: Response,
-        match_id: int,
-        user_id: str | None = Depends(auth),
-    ) -> Match | None:
-        await service.get_user(user_id)
-        assert user_id is not None
-
-        match = await service.get_match(database, match_id)
-
-        return match
-
-    # returns the match
-    @app.post("/api/v1/matches/{match_id}/turns")
-    async def api_create_turn(
-        background_tasks: BackgroundTasks,
-        request: Request,
-        response: Response,
-        match_id: int,
-        turn: schemas.TurnCreate,
-        user_id: str | None = Depends(auth),
-    ) -> Match | None:
-        await service.get_user(user_id)
-        assert user_id is not None
-
-        match = await service.take_turn(database, match_id, turn, user_id=user_id)
-        background_tasks.add_task(run_ai_turns, database, match_id)
-
-        return match
+    # @app.post("/api/v1/matches")
+    # async def api_create_match(
+    #     background_tasks: BackgroundTasks,
+    #     request: Request,
+    #     response: Response,
+    #     new_match: schemas.MatchCreate,
+    #     user_id: str | None = Depends(auth),
+    # ) -> Match | None:
+    #     await service.get_user(user_id)
+    #     assert user_id is not None
+    #
+    #     match_id = await service.create_match(user_id, database, new_match)
+    #     match = await service.get_match(database, match_id)
+    #
+    #     # background_tasks.add_task(run_ai_turns, database, match_id)
+    #     await run_ai_turns(database, match_id)
+    #
+    #     return match
+    #
+    # @app.get("/api/v1/matches/{match_id}")
+    # async def api_get_match(
+    #     request: Request,
+    #     _response: Response,
+    #     match_id: int,
+    #     user_id: str | None = Depends(auth),
+    # ) -> Match | None:
+    #     await service.get_user(user_id)
+    #     assert user_id is not None
+    #
+    #     match = await service.get_match(database, match_id)
+    #
+    #     return match
+    #
+    # # returns the match
+    # @app.post("/api/v1/matches/{match_id}/turns")
+    # async def api_create_turn(
+    #     background_tasks: BackgroundTasks,
+    #     request: Request,
+    #     response: Response,
+    #     match_id: int,
+    #     turn: schemas.TurnCreate,
+    #     user_id: str | None = Depends(auth),
+    # ) -> Match | None:
+    #     await service.get_user(user_id)
+    #     assert user_id is not None
+    #
+    #     match = await service.take_turn(database, match_id, turn, user_id=user_id)
+    #     background_tasks.add_task(run_ai_turns, database, match_id)
+    #
+    #     return match
 
     return app
 

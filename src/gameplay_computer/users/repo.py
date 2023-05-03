@@ -4,7 +4,8 @@ import os
 import httpx
 from pydantic import BaseModel
 
-from .schemas import User
+from gameplay_computer.gameplay import User
+from .schemas import FullUser
 
 
 class ClerkEmailAddress(BaseModel):
@@ -54,10 +55,10 @@ async def _list_clerk_users(force: bool = False) -> list[ClerkUser]:
     return _users_cache
 
 
-async def list_users(force: bool = False) -> list[User]:
+async def list_users(force: bool = False) -> list[FullUser]:
     clerk_users = await _list_clerk_users(force)
     return [
-        User(
+        FullUser(
             username=clerk_user.username,
             first_name=clerk_user.first_name,
             last_name=clerk_user.last_name,
@@ -73,9 +74,6 @@ async def get_user_by_id(user_id: str, force: bool = False) -> User | None:
         if clerk_user.id == user_id:
             return User(
                 username=clerk_user.username,
-                first_name=clerk_user.first_name,
-                last_name=clerk_user.last_name,
-                profile_image_url=clerk_user.profile_image_url,
             )
     if not force:
         return await get_user_by_id(user_id, force=True)
@@ -88,9 +86,6 @@ async def get_user_by_username(username: str, force: bool = False) -> User | Non
         if clerk_user.username == username:
             return User(
                 username=clerk_user.username,
-                first_name=clerk_user.first_name,
-                last_name=clerk_user.last_name,
-                profile_image_url=clerk_user.profile_image_url,
             )
     if not force:
         return await get_user_by_username(username, force=True)

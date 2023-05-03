@@ -3,12 +3,21 @@ from typing import assert_never
 from databases import Database
 from fastapi import HTTPException, status
 
+from gameplay_computer.gameplay import (
+    Game,
+    Player,
+    Match,
+    Action,
+    Connect4Action,
+    Connect4State,
+)
+
 from gameplay_computer import users, agents
-from gameplay_computer.common import Game
-from gameplay_computer.games.connect4 import State as Connect4State
+
+from gameplay_computer.games.connect4 import Connect4Logic
 
 from . import repo
-from .schemas import Action, Match, MatchSummary, Player
+from .schemas import MatchSummary
 
 
 async def create_match(
@@ -47,7 +56,7 @@ async def create_match(
                     detail="You cannot create a match with users unless you are one"
                     + "of the players.",
                 )
-            state = Connect4State()
+            state = Connect4Logic.initial_state()
             match_id = await repo.create_match(
                 database, created_by_user_id, players, state
             )
@@ -136,7 +145,10 @@ async def take_action(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Unknown Agent",
             )
-        if next_player.username != agent.username or next_player.agentname != agent.agentname:
+        if (
+            next_player.username != agent.username
+            or next_player.agentname != agent.agentname
+        ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="It is not your turn.",
@@ -150,8 +162,8 @@ async def take_action(
             detail="Invalid action for this game.",
         )
 
-    assert action in match.state.actions()
-    match.state.turn(player, action)
+    assert action in Connect4Logic.actions(match.state)
+    Connect4Logic.turn(match.state, player, action)
 
     added = await repo.create_match_turn(
         database,

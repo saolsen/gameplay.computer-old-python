@@ -1,55 +1,24 @@
 import abc
-from typing import Any, Generic, Literal, Self, TypeVar
+from typing import Generic, TypeVar
 
-from pydantic import BaseModel, Json
+from gameplay_computer.gameplay import BaseAction, BaseState
 
-Game = Literal["connect4"]
+A = TypeVar("A", bound=BaseAction)
+S = TypeVar("S", bound=BaseState)
 
-T = TypeVar("T", bound=Json[Any])
 
-
-class BaseAction(BaseModel, abc.ABC, Generic[T]):
-    game: Game
-
-    @classmethod
+class ALogic(abc.ABC, Generic[A, S]):
+    @staticmethod
     @abc.abstractmethod
-    def deserialize(cls, t: T) -> Self:
+    def initial_state() -> S:
         ...
 
+    @staticmethod
     @abc.abstractmethod
-    def serialize(self) -> T:
+    def actions(s: S) -> list[A]:
         ...
 
-
-A = TypeVar("A", bound=BaseAction[Json[Any]])
-S = TypeVar("S", bound=Json[Any])
-
-
-class BaseState(BaseModel, abc.ABC, Generic[A, S]):
-    game: Game
-    over: bool
-    winner: int | None
-    next_player: int | None
-
-    @classmethod
+    @staticmethod
     @abc.abstractmethod
-    def deserialize(
-        cls, over: bool, winner: int | None, next_player: int | None, s: S
-    ) -> Self:
+    def turn(s: S, player: int, action: A) -> None:
         ...
-
-    @abc.abstractmethod
-    def serialize(self) -> S:
-        ...
-
-    @abc.abstractmethod
-    def actions(self) -> list[A]:
-        ...
-
-    @abc.abstractmethod
-    def turn(self, player: int, action: T) -> None:
-        ...
-
-
-class BasePlayer(BaseModel):
-    kind: Literal["user", "agent"]

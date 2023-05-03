@@ -1,4 +1,4 @@
-from .schemas import User
+from .schemas import FullUser
 from .repo import (
     get_user_by_id,
     get_user_by_username,
@@ -7,7 +7,7 @@ from .repo import (
 )
 
 __all__ = [
-    "User",
+    "FullUser",
     "get_user_by_id",
     "get_user_by_username",
     "get_user_id_for_username",

@@ -1,64 +1,37 @@
-from enum import IntEnum, StrEnum
-from typing import Literal, Self, assert_never
+from typing import Literal, assert_never
 
-from pydantic import Json
-
-from gameplay_computer.common import BaseAction, BaseState
-
-
-class Player(IntEnum):
-    BLUE = 0
-    RED = 1
+from gameplay_computer.common import ALogic
+from gameplay_computer.gameplay import (
+    Connect4Action as Action,
+    Connect4Board as Board,
+    Connect4State as State,
+    Connect4Space as Space,
+)
 
 
-class Space(StrEnum):
-    EMPTY = " "
-    BLUE = "B"
-    RED = "R"
-
-
-def get_player(space: Space) -> Player:
+def get_player(space: Space) -> int:
     match space:
         case Space.BLUE:
-            return Player.BLUE
+            return 0
         case Space.RED:
-            return Player.RED
+            return 1
         case Space.EMPTY:
             assert None
         case _space as unreachable:
             assert_never(unreachable)
 
 
-def get_space(player: Player) -> Space:
+def get_space(player: int) -> Space:
     match player:
-        case Player.BLUE:
+        case 0:
             return Space.BLUE
-        case Player.RED:
+        case 1:
             return Space.RED
         case _player as unreachable:
-            assert_never(unreachable)
+            assert False, unreachable
 
 
-Result = Player | Literal["draw"] | None
-
-
-class Action(BaseAction[Json[int]]):
-    game: Literal["connect4"] = "connect4"
-    column: int
-
-    @classmethod
-    def deserialize(cls, t: Json[int]) -> Self:
-        return cls(column=t)
-
-    def serialize(self) -> Json[int]:
-        return self.column
-
-
-Board = list[list[Space]]
-
-
-def initial_state() -> Board:
-    return list([Space.EMPTY] * 6 for _ in range(7))
+Result = int | Literal["draw"] | None
 
 
 def check(board: Board) -> Result:
@@ -120,55 +93,40 @@ def check(board: Board) -> Result:
     return "draw"
 
 
-class State(BaseState[Action, Json[Board]]):
-    game: Literal["connect4"] = "connect4"
-    over: bool = False
-    winner: Player | None = None
-    next_player: Player | None = Player.BLUE
+class Connect4Logic(ALogic[Action, State]):
+    @staticmethod
+    def initial_state() -> State:
+        board = list([Space.EMPTY] * 6 for _ in range(7))
+        return State(over=False, winner=None, next_player=0, board=board)
 
-    board: Board = initial_state()
+    @staticmethod
+    def actions(s: State) -> list[Action]:
+        return [Action(column=i) for i in range(7) if s.board[i][5] == Space.EMPTY]
 
-    @classmethod
-    def deserialize(
-        cls,
-        over: bool,
-        winner: int | None,
-        next_player: int | None,
-        json: Json[Board],
-    ) -> Self:
-        return cls(over=over, winner=winner, next_player=next_player, board=json)
-
-    def serialize(self) -> Json[Board]:
-        return self.board
-
-    def actions(self) -> list[Action]:
-        return [Action(column=i) for i in range(7) if self.board[i][5] == Space.EMPTY]
-
-    def turn(self, player: int, action: Action) -> None:
-        assert self.next_player == Player(player)
-        assert self.board[action.column][5] == Space.EMPTY
+    @staticmethod
+    def turn(s: State, player: int, action: Action) -> None:
+        assert s.next_player == player
+        assert s.board[action.column][5] == Space.EMPTY
 
         for i in range(6):
-            if self.board[action.column][i] == Space.EMPTY:
-                self.board[action.column][i] = get_space(Player(player))
+            if s.board[action.column][i] == Space.EMPTY:
+                s.board[action.column][i] = get_space(player)
                 break
 
-        result = check(self.board)
+        result = check(s.board)
 
         match result:
-            case (Player.BLUE | Player.RED) as player:
-                self.over = True
-                self.winner = player
-                self.next_player = None
+            case (0 | 1) as player:
+                s.over = True
+                s.winner = player
+                s.next_player = None
             case "draw":
-                self.over = True
-                self.winner = None
-                self.next_player = None
+                s.over = True
+                s.winner = None
+                s.next_player = None
             case None:
-                self.over = False
-                self.winner = None
-                self.next_player = (
-                    Player.BLUE if self.next_player == Player.RED else Player.RED
-                )
+                s.over = False
+                s.winner = None
+                s.next_player = 0 if s.next_player == 1 else 1
             case _result as unknown:
-                assert_never(unknown)
+                assert False, unknown

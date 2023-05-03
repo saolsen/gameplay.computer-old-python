@@ -1,10 +1,17 @@
 from . import tables
-from .schemas import Game, BasePlayer, BaseAction, BaseState
+from .schemas import ALogic
+from .service import (
+    serialize_state,
+    serialize_action,
+    deserialize_state,
+    deserialize_action,
+)
 
 __all__ = [
     "tables",
-    "Game",
-    "BasePlayer",
-    "BaseAction",
-    "BaseState",
+    "ALogic",
+    "serialize_state",
+    "serialize_action",
+    "deserialize_state",
+    "deserialize_action",
 ]
