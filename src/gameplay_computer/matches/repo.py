@@ -10,8 +10,6 @@ from gameplay_computer.gameplay import (
     Player,
     Match,
     Turn,
-    Connect4State,
-    Connect4Action,
     State,
     Action,
 )

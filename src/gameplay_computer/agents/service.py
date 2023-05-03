@@ -85,8 +85,8 @@ async def get_agent_action(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Wrong game.",
         )
-    # We are sort of assuming right now that we know the agent is the next player and that
-    # somebody else checked that before calling this. tbd
+    # We are sort of assuming right now that we know the agent is the next player and
+    # that somebody else checked that before calling this. tbd
 
     action: Action | None = None
 

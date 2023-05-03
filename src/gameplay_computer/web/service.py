@@ -1,11 +1,10 @@
-import asyncio
 from typing import assert_never
 
 from fastapi import HTTPException, status
 
 from databases import Database
 
-from gameplay_computer.gameplay import Agent, User, Match, Connect4State, Connect4Action
+from gameplay_computer.gameplay import Agent, User, Match, Connect4Action
 from gameplay_computer import gameplay
 from gameplay_computer import matches, users, agents
 
@@ -14,7 +13,7 @@ import httpx
 
 
 # Stubs to keep web working.
-async def get_users() -> list[User]:
+async def get_users() -> list[users.FullUser]:
     return await users.list_users()
 
 

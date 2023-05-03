@@ -1,5 +1,3 @@
-from typing import Literal
-
 from gameplay_computer.gameplay import User
 
 

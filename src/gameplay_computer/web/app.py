@@ -26,8 +26,7 @@ from sse_starlette.sse import EventSourceResponse
 
 from . import schemas, service
 
-from gameplay_computer import users
-from gameplay_computer.gameplay import User, Agent, Player, Action, State, Turn, Match
+from gameplay_computer.gameplay import User, Agent
 
 
 def session_auth(key: jwk.JWK, request: Request) -> str | None:

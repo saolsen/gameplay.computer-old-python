@@ -8,8 +8,6 @@ from gameplay_computer.gameplay import (
     Player,
     Match,
     Action,
-    Connect4Action,
-    Connect4State,
 )
 
 from gameplay_computer import users, agents

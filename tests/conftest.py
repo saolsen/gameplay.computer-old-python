@@ -1,11 +1,14 @@
 import os
+import random
 from typing import AsyncIterator, Callable, Iterator
 from unittest import mock
 
 import databases
 import pytest
 from httpx import AsyncClient
+from fastapi import FastAPI
 
+from gameplay_computer.gameplay import Match, Action, Connect4Action, Connect4State
 from gameplay_computer.users.repo import ClerkEmailAddress, ClerkUser
 from gameplay_computer.web.app import Auth, Listener, build_app
 
@@ -103,5 +106,30 @@ async def api(
 
     app = build_app(database, listener, auth)
     async with AsyncClient(app=app, base_url="http://test") as api:
+        yield api
+    return
+
+
+async def build_test_agent_app() -> FastAPI:
+    app = FastAPI()
+
+    @app.post("/connect4_random")
+    async def connect4_random(match: Match) -> Action:
+        assert match.state.game == "connect4"
+        assert isinstance(match.state, Connect4State)
+        assert match.state.next_player is not None
+
+        open_columns = [i for i in range(7) if match.state.board[i][5] == " "]
+        column = random.choice(open_columns)
+
+        return Connect4Action(column=column)
+
+    return app
+
+
+@pytest.fixture
+async def agent_api() -> AsyncIterator[AsyncClient]:
+    agent_app = await build_test_agent_app()
+    async with AsyncClient(app=agent_app, base_url="http://test-agents.com") as api:
         yield api
     return

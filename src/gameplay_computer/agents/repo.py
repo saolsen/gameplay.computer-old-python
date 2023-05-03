@@ -1,5 +1,5 @@
 from databases import Database
-from .schemas import AgentDeployment, AgentHistory
+from .schemas import AgentDeployment
 from . import tables
 from gameplay_computer.gameplay import Agent
 from gameplay_computer import users

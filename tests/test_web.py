@@ -3,8 +3,8 @@ import databases
 from httpx import AsyncClient
 from fastapi import HTTPException
 
-from gameplay_computer import users, matches
-from gameplay_computer.games.connect4 import Action as Connect4Action
+from gameplay_computer.gameplay import Connect4Action
+from gameplay_computer import users, matches, agents
 
 
 async def test_database(database: databases.Database) -> None:
@@ -121,3 +121,33 @@ async def test_your_turn(
             Connect4Action(column=1),
             acting_user_id=user_gabe,
         )
+
+
+async def test_agents(
+    database: databases.Database, agent_api: AsyncClient, user_steve: str
+) -> None:
+    agent_id = await agents.create_agent(
+        database,
+        user_steve,
+        "connect4",
+        "random",
+        "http://test-agents.com/connect4_random",
+    )
+    rand_agent = await agents.get_agent_by_id(database, agent_id)
+    match_id = await matches.create_match(
+        database, user_steve, "connect4", [rand_agent, rand_agent]
+    )
+    match = await matches.get_match_by_id(database, match_id)
+    player = 0
+    # Play out a match, random vs random
+    while not match.state.over:
+        action = await agents.get_agent_action(database, agent_api, agent_id, match)
+        await matches.take_action(
+            database,
+            match_id,
+            player,
+            action,
+            acting_agent_id=agent_id,
+        )
+        player = 1 if player == 0 else 0
+        match = await matches.get_match_by_id(database, match_id)
