@@ -64,7 +64,6 @@ class Turn(BaseModel):
 
 class Match(BaseModel):
     id: int
-    game: Game
     players: list[Player]
     turns: list[Turn]
     turn: int

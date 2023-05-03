@@ -2,6 +2,7 @@ from databases import Database
 from fastapi import HTTPException, status
 import httpx
 import asyncio
+from typing import assert_never
 
 from gameplay_computer.gameplay import Match, Connect4Action, Action, Game, Agent
 
@@ -79,7 +80,7 @@ async def get_agent_action(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Unknown agent.",
         )
-    if agent.game != match.game:
+    if agent.game != match.state.game:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Wrong game.",
@@ -87,14 +88,18 @@ async def get_agent_action(
     # We are sort of assuming right now that we know the agent is the next player and that
     # somebody else checked that before calling this. tbd
 
-    action: Connect4Action | None = None
+    action: Action | None = None
 
     retries = 0
     while retries < 3:
         try:
             response = await client.post(deployment.url, json=match.dict())
             response.raise_for_status()
-            action = Connect4Action(**response.json())
+            match match.state.game:
+                case "connect4":
+                    action = Connect4Action(**response.json())
+                case _game as unknown:
+                    assert_never(unknown)
             break
         except httpx.HTTPError as e:
             print(f"Error: {e}")

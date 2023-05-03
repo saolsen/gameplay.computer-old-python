@@ -141,7 +141,6 @@ async def take_ai_turn(
 
     gp_match = gameplay.Match(
         id=match.id,
-        game=match.game,
         players=post_players,
         turns=post_turns,
         turn=match.turn,

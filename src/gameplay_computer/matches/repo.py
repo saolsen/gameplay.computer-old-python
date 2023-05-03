@@ -360,7 +360,6 @@ async def get_match_by_id(
 
     match = Match(
         id=match_r["id"],
-        game=match_r["game"],
         status=match_r["status"],
         created_by=created_by,
         created_at=match_r["created_at"],
