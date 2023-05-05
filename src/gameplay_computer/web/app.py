@@ -60,19 +60,23 @@ class Auth:
             return request.headers.get("Authorization")
 
 
-async def run_ai_turns(database: databases.Database, match_id: int) -> None:
-    async with httpx.AsyncClient() as client:
-        match = await service.get_match(database, match_id)
-        while True:
-            if (
-                match is not None
-                and match.state.over is False
-                and match.state.next_player is not None
-                and isinstance(match.players[match.state.next_player], Agent)
-            ):
-                match = await service.take_ai_turn(database, client, match_id)
-            else:
-                break
+async def run_ai_turns(
+    traceparent: str, database: databases.Database, match_id: int
+) -> None:
+    tx = sentry_sdk.tracing.Transaction.continue_from_headers({"sentry-trace": traceparent})
+    with sentry_sdk.start_transaction(tx, op="task", name="run_ai_turns"):
+        async with httpx.AsyncClient() as client:
+            match = await service.get_match(database, match_id)
+            while True:
+                if (
+                    match is not None
+                    and match.state.over is False
+                    and match.state.next_player is not None
+                    and isinstance(match.players[match.state.next_player], Agent)
+                ):
+                    match = await service.take_ai_turn(database, client, match_id)
+                else:
+                    break
 
 
 class Listener:
@@ -318,7 +322,8 @@ def build_app(
 
         match_id = await service.create_match(user_id, database, new_match)
 
-        background_tasks.add_task(run_ai_turns, database, match_id)
+        traceparent = sentry_sdk.Hub.current.scope.transaction.to_traceparent()
+        background_tasks.add_task(run_ai_turns, traceparent, database, match_id)
         # await run_ai_turns(database, match_id)
 
         match = await service.get_match(database, match_id)
@@ -381,7 +386,8 @@ def build_app(
 
         match = await service.take_turn(database, match_id, turn, user_id=user_id)
 
-        background_tasks.add_task(run_ai_turns, database, match_id)
+        traceparent = sentry_sdk.Hub.current.scope.transaction.to_traceparent()
+        background_tasks.add_task(run_ai_turns, traceparent, database, match_id)
         # await run_ai_turns(database, match_id)
 
         return templates.TemplateResponse(
@@ -400,6 +406,41 @@ def build_app(
     async def watch_match_changes(request: Request, match_id: int) -> Any:
         fn = listener.listen(match_id)
         return EventSourceResponse(fn())
+
+    @app.post("/agents", response_class=HTMLResponse)
+    async def create_agent(
+        request: Request,
+        user_id: str | None = Depends(auth),
+        new_agent: schemas.AgentCreate = Depends(schemas.AgentCreate.as_form),
+    ) -> Any:
+        user = await service.get_user(user_id)
+        assert user_id is not None
+        username = user.username
+        block_name = request.headers.get("hx-target")
+
+        agent_id = await service.create_agent(database, user_id, new_agent)
+        return agent_id
+
+        # match_id = await service.create_match(user_id, database, new_match)
+
+        # background_tasks.add_task(run_ai_turns, database, match_id)
+        # await run_ai_turns(database, match_id)
+
+        # match = await service.get_match(database, match_id)
+
+        # response.headers["HX-PUSH-URL"] = f"/matches/{match_id}/"
+
+        # return templates.TemplateResponse(
+        #     "connect4_match.html",
+        #     {
+        #         "request": request,
+        #         "clerk_publishable_key": clerk_publishable_key,
+        #         "match": match,
+        #         "match_id": match_id,
+        #         "username": username,
+        #     },
+        #     block_name=block_name,
+        # )
 
     # @app.post("/api/v1/matches")
     # async def api_create_match(
@@ -467,10 +508,8 @@ def app() -> FastAPI:
         sentry_sdk.init(
             dsn=sentry_dsn,
             environment=sentry_environment,
-            # Set traces_sample_rate to 1.0 to capture 100%
-            # of transactions for performance monitoring.
-            # We recommend adjusting this value in production,
             traces_sample_rate=1.0,
+            profiles_sample_rate=1.0,
         )
 
     listener = Listener(database_url)

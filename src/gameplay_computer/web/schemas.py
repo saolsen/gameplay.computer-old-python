@@ -1,7 +1,7 @@
 from typing import Literal, Self
 
 from fastapi import Form
-from pydantic import BaseModel
+from pydantic import BaseModel, HttpUrl
 
 
 class MatchCreate(BaseModel):
@@ -40,3 +40,18 @@ class TurnCreate(BaseModel):
     @classmethod
     def as_form(cls, player: int = Form(...), column: int = Form(...)) -> Self:
         return cls(player=player, column=column)
+
+
+class AgentCreate(BaseModel):
+    game: Literal["connect4"]
+    agentname: str
+    url: HttpUrl
+
+    @classmethod
+    def as_form(
+        cls,
+        game: Literal["connect4"] = Form(...),
+        agentname: str = Form(...),
+        url: HttpUrl = Form(...),
+    ) -> Self:
+        return cls(game=game, agentname=agentname, url=url)

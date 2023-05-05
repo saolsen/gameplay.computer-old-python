@@ -8,7 +8,7 @@ from gameplay_computer.gameplay import Agent, User, Match, Connect4Action
 from gameplay_computer import gameplay
 from gameplay_computer import matches, users, agents
 
-from .schemas import MatchCreate, TurnCreate
+from .schemas import MatchCreate, TurnCreate, AgentCreate
 import httpx
 
 
@@ -80,6 +80,15 @@ async def get_match(
 ) -> Match:
     match = await matches.get_match_by_id(database, match_id, turn=turn)
     return match
+
+
+async def create_agent(
+    database: Database, created_by_user_id: str, new_agent: AgentCreate
+) -> int:
+    agent_id = await agents.create_agent(
+        database, created_by_user_id, new_agent.game, new_agent.agentname, new_agent.url
+    )
+    return agent_id
 
 
 async def take_ai_turn(

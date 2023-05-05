@@ -86,7 +86,8 @@ async def get_agent_action(
             detail="Wrong game.",
         )
     # We are sort of assuming right now that we know the agent is the next player and
-    # that somebody else checked that before calling this. tbd
+    # that somebody else checked that before calling this.
+    # It'll get checked again when the turn is created.
 
     action: Action | None = None
 
