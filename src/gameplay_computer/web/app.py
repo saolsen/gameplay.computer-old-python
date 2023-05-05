@@ -495,6 +495,15 @@ def build_app(
 
     return app
 
+def skip_health(ctx: Any) -> bool:
+    if 'asgi_scope' in ctx:
+        asgi = ctx['asgi_scope']
+        path = asgi.get("path")
+        if path is not None:
+            if path.startswith('/health'):
+                return False
+    return True
+
 
 def app() -> FastAPI:
     database_url = os.environ.get("DATABASE_URL")
@@ -508,8 +517,8 @@ def app() -> FastAPI:
         sentry_sdk.init(
             dsn=sentry_dsn,
             environment=sentry_environment,
-            traces_sample_rate=1.0,
             profiles_sample_rate=1.0,
+            traces_sampler=skip_health,
         )
 
     listener = Listener(database_url)
