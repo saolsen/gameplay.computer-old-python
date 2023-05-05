@@ -63,8 +63,8 @@ class Auth:
 async def run_ai_turns(
     traceparent: str, database: databases.Database, match_id: int
 ) -> None:
-    tx = sentry_sdk.tracing.Transaction.continue_from_headers({"sentry-trace": traceparent})
-    with sentry_sdk.start_transaction(tx, op="task", name="run_ai_turns"):
+    tx = sentry_sdk.tracing.Transaction.continue_from_headers({"sentry-trace": traceparent}, op="task", name="run_ai_turns")
+    with sentry_sdk.start_transaction(tx):
         async with httpx.AsyncClient() as client:
             match = await service.get_match(database, match_id)
             while True:
@@ -320,7 +320,8 @@ def build_app(
         username = user.username
         block_name = request.headers.get("hx-target")
 
-        match_id = await service.create_match(user_id, database, new_match)
+        with sentry_sdk.start_span(description="create_match"):
+            match_id = await service.create_match(user_id, database, new_match)
 
         traceparent = sentry_sdk.Hub.current.scope.transaction.to_traceparent()
         background_tasks.add_task(run_ai_turns, traceparent, database, match_id)
