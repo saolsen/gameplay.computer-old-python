@@ -1,3 +1,4 @@
+from sentry_sdk.tracing import trace
 import json
 
 import sqlalchemy
@@ -19,6 +20,7 @@ from . import tables
 
 
 # todo: just all sql, fuck the orm
+
 
 
 async def create_match(
@@ -95,6 +97,7 @@ async def create_match(
     return match_id
 
 
+
 async def create_match_turn(
     database: Database,
     match_id: int,
@@ -168,6 +171,7 @@ async def create_match_turn(
         )
 
         return True
+
 
 
 async def list_match_summaries_for_user(
@@ -267,6 +271,7 @@ async def list_match_summaries_for_user(
 
 
 # Match with players, turns and state?
+
 async def get_match_by_id(
     database: Database, match_id: int, turn: int | None = None
 ) -> Match | None:

@@ -1,4 +1,5 @@
 from typing import Literal, assert_never
+from sentry_sdk.tracing import trace
 
 from gameplay_computer.common import ALogic
 from gameplay_computer.gameplay import (
@@ -34,6 +35,7 @@ def get_space(player: int) -> Space:
 Result = int | Literal["draw"] | None
 
 
+@trace
 def check(board: Board) -> Result:
     """
     Check for a win or draw.
@@ -95,15 +97,18 @@ def check(board: Board) -> Result:
 
 class Connect4Logic(ALogic[Action, State]):
     @staticmethod
+    @trace
     def initial_state() -> State:
         board = list([Space.EMPTY] * 6 for _ in range(7))
         return State(over=False, winner=None, next_player=0, board=board)
 
     @staticmethod
+    @trace
     def actions(s: State) -> list[Action]:
         return [Action(column=i) for i in range(7) if s.board[i][5] == Space.EMPTY]
 
     @staticmethod
+    @trace
     def turn(s: State, player: int, action: Action) -> None:
         assert s.next_player == player
         assert s.board[action.column][5] == Space.EMPTY

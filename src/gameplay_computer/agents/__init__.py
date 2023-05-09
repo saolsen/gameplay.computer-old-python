@@ -5,6 +5,7 @@ from .service import (
     get_agent_by_username_and_agentname,
     get_agent_id_for_username_and_agentname,
     get_agent_action,
+    list_agents
 )
 
 __all__ = [
@@ -15,4 +16,5 @@ __all__ = [
     "get_agent_by_username_and_agentname",
     "get_agent_id_for_username_and_agentname",
     "get_agent_action",
+    "list_agents"
 ]

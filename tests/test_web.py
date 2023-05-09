@@ -141,13 +141,12 @@ async def test_agents(
     player = 0
     # Play out a match, random vs random
     while not match.state.over:
-        action = await agents.get_agent_action(database, agent_api, agent_id, match)
-        await matches.take_action(
+        action = await agents.get_agent_action(database, agent_api, rand_agent, match)
+        match = await matches.take_action(
             database,
-            match_id,
+            match,
             player,
             action,
-            acting_agent_id=agent_id,
+            actor=rand_agent,
         )
         player = 1 if player == 0 else 0
-        match = await matches.get_match_by_id(database, match_id)

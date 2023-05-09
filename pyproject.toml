@@ -19,16 +19,20 @@ dependencies = [
     "databases[asyncpg]",
     "asyncpg_listen",
     "sqlalchemy",
-    "sentry-sdk[fastapi]",
+    "sentry-sdk[fastapi, httpx]",
     "jinja2",
     "jinja2-fragments",
-    "jwcrypto"
+    "jwcrypto",
+    "procrastinate",
 ]
 
 [project.optional-dependencies]
 test = ["pytest"]
 lint = ["black[d]", "mypy", "ruff", "sqlalchemy-stubs"]
 migrate = ["alembic", "psycopg2"]
+
+[project.scripts]
+gameplay_worker = "gameplay_computer.web.worker:main"
 
 [build-system]
 requires = ["maturin>=0.14,<0.15"]

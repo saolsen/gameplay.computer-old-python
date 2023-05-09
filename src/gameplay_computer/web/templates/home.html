@@ -3,69 +3,117 @@
 {% block main %}
 <div class="grid">
     <div>
+        <h2>Create an Agent</h2>
+        <form hx-post="/agents" hx-target="#main">
+            <fieldset>
+                <legend>Game</legend>
+                <label for="connect4">
+                    <input id="connect4" name="game" type="radio" value="connect4" checked>
+                    Connect 4
+                </label>
+            </fieldset>
+            <fieldset>
+                <legend>agentname</legend>
+                <label for="agentname">
+                    <input id="agentname" name="agentname" type="text" value="random">
+                </label>
+                <legend>url</legend>
+                <label for="url">
+                    {% if errors is not none %}
+                        {% for error in errors %}
+                            <span class="error">error: {{ error }}</span>
+                        {% endfor %}
+                        <input id="url" name="url" type="url" value="https://myagent.com/connect4/random" aria-invalid="true">
+                    {% else %}
+                        <input id="url" name="url" type="url" value="https://myagent.com/connect4/random">
+                    {% endif %}
+                    <small>The url must be publicly accessible. It will recieve a post of the gamestate
+                        on every turn and must return an action.</small>
+                </label>
+            </fieldset>
+            <button>Create</button>
+        </form>
         <h2>Start a Match</h2>
-        <article>
-            <form hx-post="/matches" hx-target="#main">
-                <fieldset>
-                    <legend>Game</legend>
-                    <label for="connect4">
-                        <input id="connect4" name="game" type="radio" value="connect4" checked>
-                        Connect 4
-                    </label>
-                </fieldset>
-                <fieldset>
-                    <legend>Blue Player</legend>
-                    <label for="blue_me">
-                        <input id="blue_me" name="player_type_1" type="radio" value="me"
-                               hx-get="/selects"
-                               hx-target="#blue_name"
-                               checked>
-                        Me ({{ username }})
-                    </label>
-                    <label for="blue_user">
-                        <input id="blue_user" name="player_type_1" type="radio" value="user"
-                               hx-get="/selects"
-                               hx-target="#blue_name">
-                        Other Human
-                    </label>
-                    <label for="blue_agent">
-                        <input id="blue_agent" name="player_type_1" type="radio" value="agent"
-                               hx-get="/selects"
-                               hx-target="#blue_name">
-                        Agent
-                    </label>
-                    <div id="blue_name">
-                        <input name="player_name_1" type="hidden" value="{{ username }}">
-                    </div>
-                    <legend>Red Player</legend>
-                    <label for="red_me">
-                        <input id="red_me" name="player_type_2" type="radio" value="me"
-                               hx-get="/selects"
-                               hx-target="#red_name"
-                               checked>
-                        Me ({{ username }})
-                    </label>
-                    <label for="red_user">
-                        <input id="red_user" name="player_type_2" type="radio" value="user"
-                               hx-get="/selects"
-                               hx-target="#red_name">
-                        Other Human
-                    </label>
-                    <label for="red_agent">
-                        <input id="red_agent" name="player_type_2" type="radio" value="agent"
-                               hx-get="/selects"
-                               hx-target="#red_name">
-                        Agent
-                    </label>
-                    <div id="red_name">
-                        <input name="player_name_2" type="hidden" value="{{ username }}">
-                    </div>
-                </fieldset>
-                <button>Play</button>
-            </form>
-        </article>
+
+        <form hx-post="/matches" hx-target="#main">
+            <fieldset>
+                <legend>Game</legend>
+                <label for="connect4">
+                    <input id="connect4" name="game" type="radio" value="connect4" checked>
+                    Connect 4
+                </label>
+            </fieldset>
+            <fieldset>
+                <legend>Blue Player</legend>
+                <label for="blue_me">
+                    <input id="blue_me" name="player_type_1" type="radio" value="me"
+                           hx-get="/selects"
+                           hx-target="#blue_name"
+                           checked>
+                    Me ({{ username }})
+                </label>
+                <label for="blue_user">
+                    <input id="blue_user" name="player_type_1" type="radio" value="user"
+                           hx-get="/selects"
+                           hx-target="#blue_name">
+                    Other Human
+                </label>
+                <label for="blue_agent">
+                    <input id="blue_agent" name="player_type_1" type="radio" value="agent"
+                           hx-get="/selects"
+                           hx-target="#blue_name">
+                    Agent
+                </label>
+                <div id="blue_name">
+                    <input name="player_name_1" type="hidden" value="{{ username }}">
+                </div>
+                <legend>Red Player</legend>
+                <label for="red_me">
+                    <input id="red_me" name="player_type_2" type="radio" value="me"
+                           hx-get="/selects"
+                           hx-target="#red_name"
+                           checked>
+                    Me ({{ username }})
+                </label>
+                <label for="red_user">
+                    <input id="red_user" name="player_type_2" type="radio" value="user"
+                           hx-get="/selects"
+                           hx-target="#red_name">
+                    Other Human
+                </label>
+                <label for="red_agent">
+                    <input id="red_agent" name="player_type_2" type="radio" value="agent"
+                           hx-get="/selects"
+                           hx-target="#red_name">
+                    Agent
+                </label>
+                <div id="red_name">
+                    <input name="player_name_2" type="hidden" value="{{ username }}">
+                </div>
+            </fieldset>
+            <button>Play</button>
+        </form>
     </div>
     <div>
+        <h2>Your Agents</h2>
+        <table role="grid">
+            <thead>
+            <tr>
+                <th>Game</th>
+                <th>Agent</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for agent in agents %}
+                {% if agent.username == username %}
+                <tr>
+                    <td>{{ agent.game }}</td>
+                    <td>{{ agent.username }}/{{ agent.agentname }}</td>
+                </tr>
+                {% endif %}
+            {% endfor %}
+            </tbody>
+        </table>
         <h2>Your Matches</h2>
         <table role="grid">
             <thead>

@@ -1,16 +1,13 @@
+from sentry_sdk.tracing import trace
 from typing import assert_never
 
 from databases import Database
 from fastapi import HTTPException, status
 
-from gameplay_computer.gameplay import (
-    Game,
-    Player,
-    Match,
-    Action,
-)
+from gameplay_computer.gameplay import Game, Player, Match, Action, User, Agent
 
-from gameplay_computer import users, agents
+from gameplay_computer import users
+
 
 from gameplay_computer.games.connect4 import Connect4Logic
 
@@ -84,17 +81,11 @@ async def list_match_summaries_for_user(
 
 async def take_action(
     database: Database,
-    match_id: int,
+    match: Match,
     player: int,
     action: Action,
-    acting_user_id: str | None = None,
-    acting_agent_id: int | None = None,
+    actor: User | Agent,
 ) -> Match:
-    assert acting_user_id is not None or acting_agent_id is not None
-    assert acting_user_id is None or acting_agent_id is None
-
-    match = await get_match_by_id(database, match_id)
-
     if match.state.next_player != player:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -107,6 +98,12 @@ async def take_action(
             detail="The game is over.",
         )
 
+    if match.turn != match.turns[-1].number:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Can not overwrite a turn.",
+        )
+
     if player < 0 or player >= len(match.players):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -115,37 +112,25 @@ async def take_action(
 
     next_player = match.players[match.state.next_player]
     if next_player.kind == "user":
-        if acting_user_id is None:
+        if not isinstance(actor, User):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Unknown User",
             )
-        user = await users.get_user_by_id(acting_user_id)
-        if user is None:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Unknown User",
-            )
-        if next_player.username != user.username:
+        if next_player.username != actor.username:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="It is not your turn.",
             )
     elif next_player.kind == "agent":
-        if acting_agent_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Unknown Agent",
-            )
-        agent = await agents.get_agent_by_id(database, acting_agent_id)
-        if agent is None:
+        if not isinstance(actor, Agent):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Unknown Agent",
             )
         if (
-            next_player.username != agent.username
-            or next_player.agentname != agent.agentname
+            next_player.username != actor.username
+            or next_player.agentname != actor.agentname
         ):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -165,7 +150,7 @@ async def take_action(
 
     added = await repo.create_match_turn(
         database,
-        match_id,
+        match.id,
         player,
         action,
         match.state,
@@ -177,5 +162,5 @@ async def take_action(
             detail=f"Turn {len(match.turns)} already exists.",
         )
 
-    match = await get_match_by_id(database, match_id)
+    match = await get_match_by_id(database, match.id)
     return match

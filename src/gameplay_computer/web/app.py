@@ -5,7 +5,6 @@ from asyncio import Queue
 from collections import defaultdict
 from pathlib import Path
 from typing import Any, AsyncIterator, Callable
-import httpx
 
 import asyncpg_listen
 import databases
@@ -24,9 +23,10 @@ from jinja2_fragments.fastapi import Jinja2Blocks  # type: ignore
 from jwcrypto import jwk, jwt  # type: ignore
 from sse_starlette.sse import EventSourceResponse
 
-from . import schemas, service
+from . import schemas, service, tasks
+from .tasks import app as papp, test_task
 
-from gameplay_computer.gameplay import User, Agent
+from gameplay_computer.gameplay import User
 
 
 def session_auth(key: jwk.JWK, request: Request) -> str | None:
@@ -58,25 +58,6 @@ class Auth:
         else:
             # Test mode, make this a real token when you expose an api!
             return request.headers.get("Authorization")
-
-
-async def run_ai_turns(
-    traceparent: str, database: databases.Database, match_id: int
-) -> None:
-    tx = sentry_sdk.tracing.Transaction.continue_from_headers({"sentry-trace": traceparent}, op="task", name="run_ai_turns")
-    with sentry_sdk.start_transaction(tx):
-        async with httpx.AsyncClient() as client:
-            match = await service.get_match(database, match_id)
-            while True:
-                if (
-                    match is not None
-                    and match.state.over is False
-                    and match.state.next_player is not None
-                    and isinstance(match.players[match.state.next_player], Agent)
-                ):
-                    match = await service.take_ai_turn(database, client, match_id)
-                else:
-                    break
 
 
 class Listener:
@@ -142,10 +123,12 @@ def build_app(
     @app.on_event("startup")
     async def startup() -> None:
         await database.connect()
+        await papp.open_async()
 
     @app.on_event("shutdown")
     async def shutdown() -> None:
         await database.disconnect()
+        await papp.close_async()
 
     web_dir = Path(__file__).parent
 
@@ -169,6 +152,9 @@ def build_app(
     async def get_test(request: Request) -> Any:
         block_name = request.headers.get("hx-target")
         print(request.cookies)
+
+        print("queueit")
+        await test_task.defer_async()
 
         return templates.TemplateResponse(
             "test.html",
@@ -215,9 +201,9 @@ def build_app(
                 </select>
                 """
             case "agent":
-                agents = ["steve/random"]
+                agents = await service.get_agents(database)
                 options = [
-                    f'<option value="{agent}">{agent}</option>' for agent in agents
+                    f'<option value="{agent.username}/{agent.agentname}">{agent.username}/{agent.agentname}</option>' for agent in agents
                 ]
                 return f"""
                 <label for="{player}_player">agentname</label>
@@ -228,6 +214,7 @@ def build_app(
             case _:
                 return None
 
+    @app.head("/")
     @app.get("/", response_class=HTMLResponse)
     async def get_root(request: Request, user_id: str | None = Depends(auth)) -> Any:
         block_name = request.headers.get("hx-target")
@@ -242,6 +229,7 @@ def build_app(
             assert user_id is not None
             username = user.username
             matches = await service.get_matches(database, user_id)
+            agents = await service.get_agents(database)
 
             return templates.TemplateResponse(
                 "home.html",
@@ -251,6 +239,8 @@ def build_app(
                     "user_id": user_id,
                     "username": username,
                     "matches": matches,
+                    "agents": agents,
+                    "errors": None,
                 },
                 block_name=block_name,
             )
@@ -293,6 +283,45 @@ def build_app(
             block_name=block_name,
         )
 
+    @app.post("/agents", response_class=HTMLResponse)
+    async def create_agent(
+            request: Request,
+            response: Response,
+            user_id: str | None = Depends(auth),
+            new_agent: schemas.AgentCreate = Depends(schemas.AgentCreate.as_form),
+    ) -> Any:
+        block_name = request.headers.get("hx-target")
+
+        user = await service.get_user(user_id)
+        assert user_id is not None
+        username = user.username
+
+        errors = []
+
+        try:
+            agent_id = await service.create_agent(database, user_id, new_agent)
+        except HTTPException as e:
+            errors.append(e.detail)
+
+        matches = await service.get_matches(database, user_id)
+        agents = await service.get_agents(database)
+
+
+        return templates.TemplateResponse(
+            "home.html",
+            {
+                "request": request,
+                "clerk_publishable_key": clerk_publishable_key,
+                "user_id": user_id,
+                "username": username,
+                "matches": matches,
+                "agents": agents,
+                "errors": errors if errors else None,
+            },
+            block_name=block_name,
+        )
+
+
     @app.get("/agents", response_class=HTMLResponse)
     async def get_agents(request: Request, user_id: str | None = Depends(auth)) -> Any:
         block_name = request.headers.get("hx-target")
@@ -309,11 +338,10 @@ def build_app(
 
     @app.post("/matches", response_class=HTMLResponse)
     async def create_match(
-        background_tasks: BackgroundTasks,
-        request: Request,
-        response: Response,
-        user_id: str | None = Depends(auth),
-        new_match: schemas.MatchCreate = Depends(schemas.MatchCreate.as_form),
+            request: Request,
+            response: Response,
+            user_id: str | None = Depends(auth),
+            new_match: schemas.MatchCreate = Depends(schemas.MatchCreate.as_form),
     ) -> Any:
         user = await service.get_user(user_id)
         assert user_id is not None
@@ -324,8 +352,7 @@ def build_app(
             match_id = await service.create_match(user_id, database, new_match)
 
         traceparent = sentry_sdk.Hub.current.scope.transaction.to_traceparent()
-        background_tasks.add_task(run_ai_turns, traceparent, database, match_id)
-        # await run_ai_turns(database, match_id)
+        await tasks.run_ai_turns.defer_async(traceparent=traceparent, match_id=match_id)
 
         match = await service.get_match(database, match_id)
 
@@ -385,11 +412,11 @@ def build_app(
         username = user.username
         block_name = request.headers.get("hx-target")
 
-        match = await service.take_turn(database, match_id, turn, user_id=user_id)
+        match = await service.get_match(database, match_id)
+        match = await service.take_turn(database, match, turn, actor=user)
 
         traceparent = sentry_sdk.Hub.current.scope.transaction.to_traceparent()
-        background_tasks.add_task(run_ai_turns, traceparent, database, match_id)
-        # await run_ai_turns(database, match_id)
+        await tasks.run_ai_turns.defer_async(traceparent=traceparent, match_id=match_id)
 
         return templates.TemplateResponse(
             "connect4_match.html",
@@ -414,10 +441,9 @@ def build_app(
         user_id: str | None = Depends(auth),
         new_agent: schemas.AgentCreate = Depends(schemas.AgentCreate.as_form),
     ) -> Any:
-        user = await service.get_user(user_id)
+        await service.get_user(user_id)
         assert user_id is not None
-        username = user.username
-        block_name = request.headers.get("hx-target")
+        request.headers.get("hx-target")
 
         agent_id = await service.create_agent(database, user_id, new_agent)
         return agent_id
@@ -496,12 +522,13 @@ def build_app(
 
     return app
 
+
 def skip_health(ctx: Any) -> bool:
-    if 'asgi_scope' in ctx:
-        asgi = ctx['asgi_scope']
+    if "asgi_scope" in ctx:
+        asgi = ctx["asgi_scope"]
         path = asgi.get("path")
         if path is not None:
-            if path.startswith('/health'):
+            if path.startswith("/health"):
                 return False
     return True
 
@@ -510,7 +537,7 @@ def app() -> FastAPI:
     database_url = os.environ.get("DATABASE_URL")
     assert database_url is not None
 
-    database = databases.Database(database_url)
+    _database = databases.Database(database_url)
 
     sentry_dsn = os.environ.get("SENTRY_DSN")
     sentry_environment = os.environ.get("SENTRY_ENVIRONMENT")
@@ -533,7 +560,7 @@ def app() -> FastAPI:
     auth = Auth(key)
 
     _app = build_app(
-        database, listener, auth, clerk_publishable_key=clerk_publishable_key
+        _database, listener, auth, clerk_publishable_key=clerk_publishable_key
     )
 
     return _app

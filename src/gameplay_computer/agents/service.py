@@ -3,11 +3,14 @@ from fastapi import HTTPException, status
 import httpx
 import asyncio
 from typing import assert_never
+import sentry_sdk
+from sentry_sdk.tracing import trace
 
-from gameplay_computer.gameplay import Match, Connect4Action, Action, Game, Agent
+from gameplay_computer.gameplay import Match, Connect4Action, Action, Game, Agent, Connect4State, Turn
 
 from gameplay_computer import users
 from . import repo
+from ..games import Connect4Logic
 
 
 async def create_agent(
@@ -23,6 +26,52 @@ async def create_agent(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Unknown user.",
         )
+
+    turn = Turn(
+        number=0,
+        player=None,
+        action=None,
+        next_player=0,
+    )
+    fake_players = [
+        Agent(
+            game=game,
+            username=created_by_user.username,
+            agentname=agentname,
+        ),
+        Agent(
+            game=game,
+            username=created_by_user.username,
+            agentname=agentname,
+        ),
+    ]
+    state = Connect4Logic.initial_state()
+    fake_match = Match(
+        id=1,
+        players=fake_players,
+        turns=[turn],
+        turn=0,
+        state=state,
+    )
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(url, json=fake_match.dict(), timeout=1)
+        except (httpx.ReadTimeout, httpx.ConnectError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Agent doesn't seem online.",
+            )
+        if response.status_code != 200:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Agent doesn't seem online.",
+            )
+        match fake_match.state.game:
+            case "connect4":
+                action = Connect4Action(**response.json())
+            case _game as unknown:
+                assert_never(unknown)
+
     agent_id = await repo.create_agent(
         database, created_by_user_id, game, agentname, url
     )
@@ -66,15 +115,17 @@ async def get_agent_id_for_username_and_agentname(
         )
     return agent_id
 
-
 async def get_agent_action(
     database: Database,
     client: httpx.AsyncClient,
-    agent_id: int,
+    agent: Agent,
     match: Match,
 ) -> Action:
-    agent = await get_agent_by_id(database, agent_id)
-    deployment = await repo.get_agent_deployment_by_id(database, agent_id)
+    span = sentry_sdk.Hub.current.scope.span
+    if span is not None:
+        span.set_tag("agent", f"{agent.username}/{agent.agentname}")
+
+    deployment = await repo.get_agent_deployment(database, agent)
     if deployment is None:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -85,9 +136,6 @@ async def get_agent_action(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Wrong game.",
         )
-    # We are sort of assuming right now that we know the agent is the next player and
-    # that somebody else checked that before calling this.
-    # It'll get checked again when the turn is created.
 
     action: Action | None = None
 
@@ -116,3 +164,7 @@ async def get_agent_action(
         )
 
     return action
+
+async def list_agents(database: Database) -> list[Agent]:
+    agents = await repo.list_agents(database)
+    return agents

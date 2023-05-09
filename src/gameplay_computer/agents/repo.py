@@ -4,6 +4,8 @@ from . import tables
 from gameplay_computer.gameplay import Agent
 from gameplay_computer import users
 import sqlalchemy
+from sentry_sdk.tracing import trace
+
 
 
 async def create_agent(
@@ -38,6 +40,7 @@ async def create_agent(
     return agent_id
 
 
+@trace
 async def get_agent_by_id(database: Database, agent_id: int) -> Agent | None:
     agent = await database.fetch_one(
         query=tables.agents.select().where(tables.agents.c.id == agent_id)
@@ -53,6 +56,7 @@ async def get_agent_by_id(database: Database, agent_id: int) -> Agent | None:
     )
 
 
+@trace
 async def get_agent_by_username_and_agentname(
     database: Database, username: str, agentname: str
 ) -> Agent | None:
@@ -90,13 +94,19 @@ async def get_agent_id_for_username_and_agentname(
     return int(agent_id)
 
 
-async def get_agent_deployment_by_id(
-    database: Database, agent_id: int
+@trace
+async def get_agent_deployment(
+    database: Database, agent: Agent
 ) -> AgentDeployment | None:
+    user_id = await users.get_user_id_for_username(agent.username)
     agent_deployment = await database.fetch_one(
-        query=tables.agent_deployment.select().where(
-            tables.agent_deployment.c.agent_id == agent_id
-        )
+        query="""
+        select ad.url, ad.healthy, ad.active
+        from agents a
+        join agent_deployment ad on a.id = ad.agent_id
+        where a.user_id = :user_id and a.agentname = :agentname
+        """,
+        values={"user_id": user_id, "agentname": agent.agentname},
     )
     if agent_deployment is None:
         return None
@@ -105,3 +115,23 @@ async def get_agent_deployment_by_id(
         healthy=agent_deployment["healthy"],
         active=agent_deployment["active"],
     )
+
+async def list_agents(
+    database: Database
+) -> list[Agent]:
+    agents_r = await database.fetch_all(
+        query="""
+        select a.game, a.user_id, a.agentname
+        from agents a
+        """,
+    )
+    agents = []
+    for agent_r in agents_r:
+        user = await users.get_user_by_id(agent_r["user_id"])
+        assert user is not None
+        agents.append(Agent(
+            game=agent_r["game"],
+            username=user.username,
+            agentname=agent_r["agentname"],
+        ))
+    return agents
