@@ -1,12 +1,13 @@
-from pydantic import Json
 from typing import Any, assert_never
+
+from pydantic import Json
 
 from gameplay_computer.gameplay import (
     Action,
-    State,
-    Game,
-    Connect4State,
     Connect4Action,
+    Connect4State,
+    Game,
+    State,
 )
 
 

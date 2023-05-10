@@ -1,10 +1,11 @@
-from databases import Database
-from .schemas import AgentDeployment
-from . import tables
-from gameplay_computer.gameplay import Agent
-from gameplay_computer import users
 import sqlalchemy
-from sentry_sdk.tracing import trace
+from databases import Database
+
+from gameplay_computer import users
+from gameplay_computer.gameplay import Agent
+
+from . import tables
+from .schemas import AgentDeployment
 
 
 async def create_agent(
@@ -39,7 +40,6 @@ async def create_agent(
     return agent_id
 
 
-@trace
 async def get_agent_by_id(database: Database, agent_id: int) -> Agent | None:
     agent = await database.fetch_one(
         query=tables.agents.select().where(tables.agents.c.id == agent_id)
@@ -55,7 +55,6 @@ async def get_agent_by_id(database: Database, agent_id: int) -> Agent | None:
     )
 
 
-@trace
 async def get_agent_by_username_and_agentname(
     database: Database, username: str, agentname: str
 ) -> Agent | None:
@@ -93,7 +92,6 @@ async def get_agent_id_for_username_and_agentname(
     return int(agent_id)
 
 
-@trace
 async def get_agent_deployment(
     database: Database, agent: Agent
 ) -> AgentDeployment | None:

@@ -1,10 +1,11 @@
-import sentry_sdk
 import os
-import procrastinate
+
 import databases
 import httpx
+import procrastinate
+import sentry_sdk
+
 from . import service
-from gameplay_computer.gameplay import Agent
 
 database_url = os.environ.get("DATABASE_URL")
 if database_url is None:
@@ -27,14 +28,4 @@ async def run_ai_turns(traceparent: str, match_id: int) -> None:
     )
     with sentry_sdk.start_transaction(tx):
         async with httpx.AsyncClient() as client:
-            match = await service.get_match(database, match_id)
-            while True:
-                if (
-                    match is not None
-                    and match.state.over is False
-                    and match.state.next_player is not None
-                    and isinstance(match.players[match.state.next_player], Agent)
-                ):
-                    match = await service.take_ai_turn(database, client, match)
-                else:
-                    break
+            await service.take_ai_turns(database, client, match_id)

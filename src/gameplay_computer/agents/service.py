@@ -1,22 +1,16 @@
-from databases import Database
-from fastapi import HTTPException, status
-import httpx
 import asyncio
 from typing import assert_never
-import sentry_sdk
 
-from gameplay_computer.gameplay import (
-    Match,
-    Connect4Action,
-    Action,
-    Game,
-    Agent,
-    Turn,
-)
+import httpx
+import sentry_sdk
+from databases import Database
+from fastapi import HTTPException, status
 
 from gameplay_computer import users
-from . import repo
+from gameplay_computer.gameplay import Action, Agent, Connect4Action, Game, Match, Turn
+
 from ..games import Connect4Logic
+from . import repo
 
 
 async def create_agent(

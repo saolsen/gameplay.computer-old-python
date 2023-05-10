@@ -5,6 +5,7 @@ import httpx
 from pydantic import BaseModel
 
 from gameplay_computer.gameplay import User
+
 from .schemas import FullUser
 
 

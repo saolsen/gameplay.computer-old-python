@@ -19,4 +19,4 @@ FROM python:3.11-slim-bullseye as prod
 COPY --from=build /root/target/wheels wheels
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir --find-links=wheels 'gameplay_computer[web]'
-CMD ["uvicorn", "gameplay_computer.web.app:app", "--factory", "--proxy-headers", "--forwarded-allow-ips", "*", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "gameplay_computer.web.app:app", "--proxy-headers", "--forwarded-allow-ips", "*", "--host", "0.0.0.0", "--port", "8000"]

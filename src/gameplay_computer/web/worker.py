@@ -1,7 +1,8 @@
-import os
 import asyncio
-import sentry_sdk
 import logging
+import os
+
+import sentry_sdk
 
 from gameplay_computer.web import tasks
 

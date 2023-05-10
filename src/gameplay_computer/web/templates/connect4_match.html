@@ -2,8 +2,8 @@
 {% block title %}gameplay.computer{% endblock %}
 {% block main %}
 {# Subscribe to updates #}
-<div hx-ext="sse" sse-connect="/matches/{{match_id}}/changes">
-    <div id="match_state" hx-get="/matches/{{match_id}}" hx-trigger="sse:message" class="grid">
+<div hx-ext="sse" sse-connect="/app/matches/{{match.id}}/changes">
+    <div id="match_state" hx-get="/app/matches/{{match.id}}" hx-trigger="sse:message" class="grid">
         {% block match_state %}
         <div>
             <hgroup>
@@ -18,7 +18,7 @@
                     {% endif %}
                 {% else %}
                     {% if match.state.next_player == 0 %}
-                        {% if match.players[match.state.next_player].kind == "user" and match.players[match.state.next_player].username == username %}
+                        {% if match.players[match.state.next_player].kind == "user" and match.players[match.state.next_player].username == user.username %}
                             <h4>Blue's turn</h4>
                             <span>That's you!</span>
                         {% else %}
@@ -30,7 +30,7 @@
                             {% endif %}
                         {% endif %}
                     {% else %}
-                        {% if match.players[match.state.next_player].kind == "user" and match.players[match.state.next_player].username == username %}
+                        {% if match.players[match.state.next_player].kind == "user" and match.players[match.state.next_player].username == user.username %}
                             <h4>Red's Turn</h4>
                             <span>That's you!</span>
                         {% else %}
@@ -58,12 +58,12 @@
                 </defs>
                 {% if match.state.over is false
                       and match.players[match.state.next_player].kind == "user"
-                      and match.players[match.state.next_player].username == username %}
+                      and match.players[match.state.next_player].username == user.username %}
                 <svg x="0" y="0">
                     {% for i in range(0, 8) %}
                     <g>
                         <circle class="turn-marker-{{ match.state.next_player }}" cx="{{ i*100 + 50 }}" cy="50" r="45"
-                            hx-post="/matches/{{match_id}}/turns" hx-target="#match_state"
+                            hx-post="/app/matches/{{match.id}}/turns/create_turn" hx-target="#match_state"
                             hx-vals='{"player": {{ match.state.next_player }}, "column": {{i}}}'>
                         </circle>
                     </g>

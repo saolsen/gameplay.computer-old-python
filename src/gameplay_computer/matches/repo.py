@@ -3,20 +3,11 @@ import json
 import sqlalchemy
 from databases import Database
 
-from gameplay_computer import users, agents, common
-from gameplay_computer.gameplay import (
-    User,
-    Agent,
-    Player,
-    Match,
-    Turn,
-    State,
-    Action,
-)
-from .schemas import MatchSummary
+from gameplay_computer import agents, common, users
+from gameplay_computer.gameplay import Action, Agent, Match, Player, State, Turn, User
 
 from . import tables
-
+from .schemas import MatchSummary
 
 # todo: just all sql, fuck the orm
 

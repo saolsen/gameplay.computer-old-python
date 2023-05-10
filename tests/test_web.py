@@ -1,10 +1,10 @@
-import pytest
 import databases
-from httpx import AsyncClient
+import pytest
 from fastapi import HTTPException
+from httpx import AsyncClient
 
+from gameplay_computer import agents, matches, users
 from gameplay_computer.gameplay import Connect4Action
-from gameplay_computer import users, matches, agents
 
 
 async def test_database(database: databases.Database) -> None:

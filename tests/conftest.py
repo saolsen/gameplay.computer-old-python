@@ -5,12 +5,12 @@ from unittest import mock
 
 import databases
 import pytest
-from httpx import AsyncClient
 from fastapi import FastAPI
+from httpx import AsyncClient
 
-from gameplay_computer.gameplay import Match, Action, Connect4Action, Connect4State
+from gameplay_computer.gameplay import Action, Connect4Action, Connect4State, Match
 from gameplay_computer.users.repo import ClerkEmailAddress, ClerkUser
-from gameplay_computer.web.app import Auth, Listener, build_app
+from gameplay_computer.web.app_old import Auth, Listener, build_app
 
 
 @pytest.fixture(autouse=True)

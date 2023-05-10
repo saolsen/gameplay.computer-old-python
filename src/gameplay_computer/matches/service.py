@@ -3,11 +3,8 @@ from typing import assert_never
 from databases import Database
 from fastapi import HTTPException, status
 
-from gameplay_computer.gameplay import Game, Player, Match, Action, User, Agent
-
 from gameplay_computer import users
-
-
+from gameplay_computer.gameplay import Action, Agent, Game, Match, Player, User
 from gameplay_computer.games.connect4 import Connect4Logic
 
 from . import repo

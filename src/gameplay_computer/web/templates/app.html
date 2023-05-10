@@ -1,0 +1,173 @@
+{% extends "_app.html" %}
+{% block title %}gameplay.computer{% endblock %}
+{% block main %}
+<div class="grid">
+    <div>
+        <h2>Create an Agent</h2>
+        {% block create_agent %}
+            <form hx-post="/app/agents/create_agent">
+                <fieldset>
+                    <legend>Game</legend>
+                    <label for="connect4">
+                        <input id="connect4" name="game" type="radio" value="connect4" checked>
+                        Connect 4
+                    </label>
+                </fieldset>
+                <fieldset>
+                    <legend>agentname</legend>
+                    <label for="agentname">
+                        <input id="agentname" name="agentname" type="text" value="random">
+                    </label>
+                    <legend>url</legend>
+                    <label for="url">
+                        <input id="url" name="url" type="url" value="https://myagent.com/connect4/random" {% if create_agent_errors %}aria-invalid="true"{%  endif  %}>
+                        <small>The url must be publicly accessible. It will recieve a post of the gamestate
+                            on every turn and must return an action.</small>
+                    </label>
+                </fieldset>
+                {% if create_agent_errors %}
+                    <ul>
+                        {% for error in create_agent_errors %}
+                            <li>{{ error }}</li>
+                        {% endfor %}
+                    </ul>
+                {% endif %}
+                <button>Create</button>
+            </form>
+        {% endblock %}
+        <h2>Start a Match</h2>
+        {% block create_match %}
+        <form hx-post="/app/matches/create_match">
+            <fieldset>
+                <legend>Game</legend>
+                <label for="connect4">
+                    <input id="connect4" name="game" type="radio" value="connect4" checked>
+                    Connect 4
+                </label>
+            </fieldset>
+            <fieldset>
+                <legend>Blue Player</legend>
+                <label for="blue_me">
+                    <input id="blue_me" name="player_type_1" type="radio" value="me"
+                           hx-get="/app/matches/create_match/selects"
+                           hx-target="#blue_name"
+                           checked>
+                    Me ({{ user.username }})
+                </label>
+                <label for="blue_user">
+                    <input id="blue_user" name="player_type_1" type="radio" value="user"
+                           hx-get="/app/matches/create_match/selects"
+                           hx-target="#blue_name">
+                    Other Human
+                </label>
+                <label for="blue_agent">
+                    <input id="blue_agent" name="player_type_1" type="radio" value="agent"
+                           hx-get="/app/matches/create_match/selects"
+                           hx-target="#blue_name">
+                    Agent
+                </label>
+                <div id="blue_name">
+                    <input name="player_name_1" type="hidden" value="{{ user.username }}">
+                </div>
+                <legend>Red Player</legend>
+                <label for="red_me">
+                    <input id="red_me" name="player_type_2" type="radio" value="me"
+                           hx-get="/app/matches/create_match/selects"
+                           hx-target="#red_name"
+                           checked>
+                    Me ({{ user.username }})
+                </label>
+                <label for="red_user">
+                    <input id="red_user" name="player_type_2" type="radio" value="user"
+                           hx-get="/app/matches/create_match/selects"
+                           hx-target="#red_name">
+                    Other Human
+                </label>
+                <label for="red_agent">
+                    <input id="red_agent" name="player_type_2" type="radio" value="agent"
+                           hx-get="/app/matches/create_match/selects"
+                           hx-target="#red_name">
+                    Agent
+                </label>
+                <div id="red_name">
+                    <input name="player_name_2" type="hidden" value="{{ user.username }}">
+                </div>
+            </fieldset>
+            <button>Play</button>
+        </form>
+        {% endblock %}
+    </div>
+    <div>
+        <h2>Your Agents</h2>
+        <table role="grid">
+            <thead>
+            <tr>
+                <th>Game</th>
+                <th>Agent</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for agent in agents %}
+                {% if agent.username == user.username %}
+                <tr>
+                    <td>{{ agent.game }}</td>
+                    <td>{{ agent.username }}/{{ agent.agentname }}</td>
+                </tr>
+                {% endif %}
+            {% endfor %}
+            </tbody>
+        </table>
+        <h2>Your Matches</h2>
+        <table role="grid">
+            <thead>
+                <tr>
+                    <th>Id</th>
+                    <th>Game</th>
+                    <th>Status</th>
+                    <th>Blue</th>
+                    <th>Red</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for match in matches %}
+                <tr>
+                    <th scope="row">
+                        {# todo: boosted link #}
+                        <a href="/app/matches/{{ match.id }}">{{ match.id }}</a>
+                    </th>
+                    <td>{{ match.game_name }}</td>
+                    <td>
+                        {% if match.status == "finished" %}
+                            {% if match.winner == 0 %}
+                            <span>Blue Won</span>
+                            {% elif match.winner == 1 %}
+                            <span>Red Won</span>
+                            {% else %}
+                            <span>Draw</span>
+                            {% endif %}
+                        {% else %}
+                            {%  if match.is_next_player %}
+                                <span>Your Turn: </span>
+                            {% else %}
+                                <span>Waiting on: </span>
+                            {% endif %}
+                            {% if match.next_player == 0 %}
+                                <span>Blue</span>
+                            {% elif match.next_player == 1 %}
+                                <span>Red</span>
+                            {% endif %}
+                        {% endif %}
+                    </td>
+                    <td>
+                        {{ match.blue }}
+                    </td>
+                    <td>
+                        {{ match.red }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
