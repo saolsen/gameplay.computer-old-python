@@ -1,7 +1,6 @@
 from typing import assert_never
 
 from fastapi import HTTPException, status
-from sentry_sdk.tracing import trace
 
 from databases import Database
 
@@ -90,10 +89,12 @@ async def create_agent(
     )
     return agent_id
 
+
 async def get_agents(
     database: Database,
 ) -> list[Agent]:
     return await agents.list_agents(database)
+
 
 async def take_ai_turn(
     database: Database,

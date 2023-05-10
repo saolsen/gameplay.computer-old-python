@@ -1,4 +1,3 @@
-from sentry_sdk.tracing import trace
 from typing import assert_never
 
 from databases import Database

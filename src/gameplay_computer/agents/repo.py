@@ -7,7 +7,6 @@ import sqlalchemy
 from sentry_sdk.tracing import trace
 
 
-
 async def create_agent(
     database: Database, created_by_user_id: str, game: str, agentname: str, url: str
 ) -> int:
@@ -116,9 +115,8 @@ async def get_agent_deployment(
         active=agent_deployment["active"],
     )
 
-async def list_agents(
-    database: Database
-) -> list[Agent]:
+
+async def list_agents(database: Database) -> list[Agent]:
     agents_r = await database.fetch_all(
         query="""
         select a.game, a.user_id, a.agentname
@@ -129,9 +127,11 @@ async def list_agents(
     for agent_r in agents_r:
         user = await users.get_user_by_id(agent_r["user_id"])
         assert user is not None
-        agents.append(Agent(
-            game=agent_r["game"],
-            username=user.username,
-            agentname=agent_r["agentname"],
-        ))
+        agents.append(
+            Agent(
+                game=agent_r["game"],
+                username=user.username,
+                agentname=agent_r["agentname"],
+            )
+        )
     return agents

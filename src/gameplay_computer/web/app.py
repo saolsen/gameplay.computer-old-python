@@ -203,7 +203,8 @@ def build_app(
             case "agent":
                 agents = await service.get_agents(database)
                 options = [
-                    f'<option value="{agent.username}/{agent.agentname}">{agent.username}/{agent.agentname}</option>' for agent in agents
+                    f'<option value="{agent.username}/{agent.agentname}">{agent.username}/{agent.agentname}</option>'
+                    for agent in agents
                 ]
                 return f"""
                 <label for="{player}_player">agentname</label>
@@ -285,10 +286,10 @@ def build_app(
 
     @app.post("/agents", response_class=HTMLResponse)
     async def create_agent(
-            request: Request,
-            response: Response,
-            user_id: str | None = Depends(auth),
-            new_agent: schemas.AgentCreate = Depends(schemas.AgentCreate.as_form),
+        request: Request,
+        response: Response,
+        user_id: str | None = Depends(auth),
+        new_agent: schemas.AgentCreate = Depends(schemas.AgentCreate.as_form),
     ) -> Any:
         block_name = request.headers.get("hx-target")
 
@@ -299,13 +300,12 @@ def build_app(
         errors = []
 
         try:
-            agent_id = await service.create_agent(database, user_id, new_agent)
+            await service.create_agent(database, user_id, new_agent)
         except HTTPException as e:
             errors.append(e.detail)
 
         matches = await service.get_matches(database, user_id)
         agents = await service.get_agents(database)
-
 
         return templates.TemplateResponse(
             "home.html",
@@ -320,7 +320,6 @@ def build_app(
             },
             block_name=block_name,
         )
-
 
     @app.get("/agents", response_class=HTMLResponse)
     async def get_agents(request: Request, user_id: str | None = Depends(auth)) -> Any:
@@ -338,10 +337,10 @@ def build_app(
 
     @app.post("/matches", response_class=HTMLResponse)
     async def create_match(
-            request: Request,
-            response: Response,
-            user_id: str | None = Depends(auth),
-            new_match: schemas.MatchCreate = Depends(schemas.MatchCreate.as_form),
+        request: Request,
+        response: Response,
+        user_id: str | None = Depends(auth),
+        new_match: schemas.MatchCreate = Depends(schemas.MatchCreate.as_form),
     ) -> Any:
         user = await service.get_user(user_id)
         assert user_id is not None

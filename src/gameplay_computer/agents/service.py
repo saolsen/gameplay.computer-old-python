@@ -4,9 +4,15 @@ import httpx
 import asyncio
 from typing import assert_never
 import sentry_sdk
-from sentry_sdk.tracing import trace
 
-from gameplay_computer.gameplay import Match, Connect4Action, Action, Game, Agent, Connect4State, Turn
+from gameplay_computer.gameplay import (
+    Match,
+    Connect4Action,
+    Action,
+    Game,
+    Agent,
+    Turn,
+)
 
 from gameplay_computer import users
 from . import repo
@@ -68,7 +74,7 @@ async def create_agent(
             )
         match fake_match.state.game:
             case "connect4":
-                action = Connect4Action(**response.json())
+                Connect4Action(**response.json())
             case _game as unknown:
                 assert_never(unknown)
 
@@ -114,6 +120,7 @@ async def get_agent_id_for_username_and_agentname(
             detail="Unknown agent.",
         )
     return agent_id
+
 
 async def get_agent_action(
     database: Database,
@@ -164,6 +171,7 @@ async def get_agent_action(
         )
 
     return action
+
 
 async def list_agents(database: Database) -> list[Agent]:
     agents = await repo.list_agents(database)
