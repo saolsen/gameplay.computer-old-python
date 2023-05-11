@@ -40,6 +40,24 @@ async def create_agent(
     return agent_id
 
 
+async def delete_agent(database: Database, agent_id: int) -> bool:
+    async with database.transaction():
+        await database.execute(
+            query=tables.agent_deployment.delete().where(
+                tables.agent_deployment.c.agent_id == agent_id
+            )
+        )
+        await database.execute(
+            query=tables.agent_history.delete().where(
+                tables.agent_history.c.agent_id == agent_id
+            )
+        )
+        await database.execute(
+            query=tables.agents.delete().where(tables.agents.c.id == agent_id)
+        )
+    return True
+
+
 async def get_agent_by_id(database: Database, agent_id: int) -> Agent | None:
     agent = await database.fetch_one(
         query=tables.agents.select().where(tables.agents.c.id == agent_id)

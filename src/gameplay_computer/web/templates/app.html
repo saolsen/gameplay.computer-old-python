@@ -1,7 +1,8 @@
 {% extends "_app.html" %}
 {% block title %}gameplay.computer{% endblock %}
 {% block main %}
-<div class="grid">
+{# for now reloading the whole page on updates, could just reload the agents view if I add an agents route #}
+<div class="grid" hx-trigger="AgentUpdate from:body" hx-get="/app" hx-target="#main">
     <div>
         <h2>Create an Agent</h2>
         {% block create_agent %}
@@ -104,6 +105,7 @@
             <tr>
                 <th>Game</th>
                 <th>Agent</th>
+                <th>Delete</th>
             </tr>
             </thead>
             <tbody>
@@ -112,6 +114,7 @@
                 <tr>
                     <td>{{ agent.game }}</td>
                     <td>{{ agent.username }}/{{ agent.agentname }}</td>
+                    <td><button hx-delete="/app/agents/{{ agent.username }}/{{ agent.agentname }}">Delete</button></td>
                 </tr>
                 {% endif %}
             {% endfor %}

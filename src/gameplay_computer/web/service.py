@@ -28,6 +28,12 @@ async def create_agent(
     return agent_id
 
 
+async def delete_agent(
+    database: Database, deleted_by_user_id: str, username: str, agentname: str
+) -> bool:
+    return await agents.delete_agent(database, deleted_by_user_id, username, agentname)
+
+
 async def get_matches(database: Database, user_id: str) -> list[matches.MatchSummary]:
     return await matches.list_match_summaries_for_user(database, user_id)
 

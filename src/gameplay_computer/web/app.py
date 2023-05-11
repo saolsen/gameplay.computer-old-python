@@ -5,7 +5,7 @@ from typing import Any
 
 import databases
 import sentry_sdk
-from fastapi import Depends, FastAPI, Request, Response
+from fastapi import Depends, FastAPI, Request, Response, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from jinja2_fragments.fastapi import Jinja2Blocks  # type: ignore
@@ -184,6 +184,7 @@ async def create_turn(
 @app.post("/app/agents/create_agent", response_class=HTMLResponse)
 async def create_agent(
     request: Request,
+    response: Response,
     user: AuthUser = Depends(auth),
     new_agent: AgentCreate = Depends(AgentCreate.as_form),
 ) -> Any:
@@ -194,7 +195,7 @@ async def create_agent(
     except Exception as e:
         create_agent_errors = [str(e)]
 
-    # todo: a header that sends a new_agent event
+    response.headers["hx-trigger"] = "AgentUpdate"
 
     return view(
         request,
@@ -203,6 +204,22 @@ async def create_agent(
         user=user,
         create_agent_errors=create_agent_errors,
     )
+
+
+@app.delete("/app/agents/{username}/{agentname}", response_class=HTMLResponse)
+async def create_agent(
+    request: Request,
+    response: Response,
+    username: str,
+    agentname: str,
+    user: AuthUser = Depends(auth),
+) -> Any:
+    deleted = await service.delete_agent(database, user.user_id, username, agentname)
+    if deleted:
+        response.headers["hx-trigger"] = "AgentUpdate"
+        return "ok"
+    else:
+        raise HTTPException(status_code=404, detail="Agent not found")
 
 
 @app.on_event("startup")

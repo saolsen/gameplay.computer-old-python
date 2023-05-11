@@ -78,6 +78,20 @@ async def create_agent(
     return agent_id
 
 
+async def delete_agent(
+    database: Database, deleted_by_user_id: str, username: str, agentname: str
+) -> bool:
+    agent_id = await get_agent_id_for_username_and_agentname(
+        database, username, agentname
+    )
+    deleted_by_user = await users.get_user_by_id(deleted_by_user_id)
+    if deleted_by_user is None:
+        return False
+    if deleted_by_user.username == username:
+        return await repo.delete_agent(database, agent_id)
+    return False
+
+
 async def get_agent_by_id(database: Database, agent_id: int) -> Agent:
     agent = await repo.get_agent_by_id(database, agent_id)
     if agent is None:
