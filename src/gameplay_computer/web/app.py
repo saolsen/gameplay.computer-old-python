@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from jinja2_fragments.fastapi import Jinja2Blocks  # type: ignore
 from sse_starlette.sse import EventSourceResponse
 
+import gameplay_computer.gameplay
 from . import service, tasks
 from .auth import AuthUser, auth
 from .listener import Listener
@@ -220,6 +221,54 @@ async def create_agent(
         return "ok"
     else:
         raise HTTPException(status_code=404, detail="Agent not found")
+
+
+from gameplay_computer.gameplay import (
+    Match,
+    Action,
+    Connect4Action,
+    Connect4State,
+    User,
+    Agent,
+    Turn,
+)
+
+
+@app.get("/example_match")
+async def example_match() -> Match:
+    return Match(
+        id=1,
+        players=[
+            User(username="steve"),
+            Agent(game="connect4", username="steve", agentname="youragent"),
+        ],
+        turns=[
+            Turn(number=0, player=None, action=None, next_player=0),
+            Turn(number=1, player=0, action=Connect4Action(column=3), next_player=1),
+            Turn(number=2, player=1, action=Connect4Action(column=2), next_player=0),
+            Turn(number=3, player=0, action=Connect4Action(column=3), next_player=1),
+        ],
+        turn=3,
+        state=Connect4State(
+            over=False,
+            winner=None,
+            next_player=1,
+            board=[
+                [" ", " ", " ", " ", " ", " "],
+                [" ", " ", " ", " ", " ", " "],
+                ["R", " ", " ", " ", " ", " "],
+                ["B", "B", " ", " ", " ", " "],
+                [" ", " ", " ", " ", " ", " "],
+                [" ", " ", " ", " ", " ", " "],
+                [" ", " ", " ", " ", " ", " "],
+            ],
+        ),
+    )
+
+
+@app.get("/example_action")
+async def example_action() -> Connect4Action:
+    return Connect4Action(column=3)
 
 
 @app.on_event("startup")

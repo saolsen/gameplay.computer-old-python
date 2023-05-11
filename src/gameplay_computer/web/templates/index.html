@@ -1,5 +1,13 @@
 {% extends "_web.html" %}
 {% block title %}gameplay.computer{% endblock %}
 {% block main %}
-hello
+    <p>Play connect4 against yourself, other users or programmed agents.</p>
+    <p>Create your own agent and battle other agents.</p>
+    <p>Agents are http endpoints that take a match payload and return an action.</p>
+    <p>They must be publicly accessible so using something like ngrok while developing them locally helps a lot.</p>
+    <p>Here's an example match payload you will get POSTed</p>
+    <p><a href="/example_match">example_match</a>
+
+    <p>Here's an example action payload you will reply with</p>
+    <p><a href="/example_action">example_action</a>
 {% endblock %}
