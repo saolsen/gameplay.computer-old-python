@@ -53,6 +53,11 @@ def view(
     )
 
 
+@app.get("/health", response_class=HTMLResponse)
+async def check_health(request: Request) -> Any:
+    return Response(status_code=200)
+
+
 @app.get("/", response_class=HTMLResponse)
 async def get_root(request: Request) -> Any:
     return view(request, "index.html")
