@@ -1,6 +1,11 @@
 # Gameplay
 
-Gameplay is a bunch of experimental AI stuff for playing games
+https://gameplay.computer
+
+Play connect 4 against yourself or other people.
+Write AI agents that play connect4 and battle other AI agents.
+
+![CleanShot 2023-05-30 at 07 47 57](https://github.com/saolsen/gameplay.computer/assets/508702/7c4214d8-afa5-4d3d-bfd5-2834bc406a7a)
 
 ## Dependencies
 * postgres
